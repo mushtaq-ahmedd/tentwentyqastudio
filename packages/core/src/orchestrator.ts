@@ -40,6 +40,15 @@ export async function runAudit(auditId: string): Promise<void> {
     audit.environment
   );
 
+  // docs/04 Content Engine Mode 1: the most recently uploaded, successfully parsed Content Sheet
+  // for this project (if any) — engines never query KnowledgeSource themselves (docs/03), so the
+  // Orchestrator resolves it once here, same pattern as figmaFileUrl/figmaAccessToken below.
+  const contentSheetSource = await prisma.knowledgeSource.findFirst({
+    where: { projectId: audit.projectId, type: "CONTENT_SHEETS", status: "PROCESSED" },
+    orderBy: { uploadedAt: "desc" },
+  });
+  const contentSheetRows = (contentSheetSource?.parsedContent as { rows?: unknown[] } | null)?.rows ?? null;
+
   const executionOrder = engineRegistry.resolveExecutionOrder();
   const totalForThisAudit = audit.engineResults.length;
   const runnable = executionOrder.filter((engine) =>
@@ -64,6 +73,9 @@ export async function runAudit(auditId: string): Promise<void> {
       // Resolved Global -> Project -> Environment validation config (docs/03 hierarchy) — engines
       // read the already-merged result, never the individual levels themselves.
       engineConfig,
+      // Parsed Content Sheet rows (docs/04 Content Engine Mode 1), or null if the project has no
+      // successfully parsed Content Sheet — the Content Engine falls back to Mode 2-only checks.
+      contentSheetRows,
     },
     sharedResources: {},
   };

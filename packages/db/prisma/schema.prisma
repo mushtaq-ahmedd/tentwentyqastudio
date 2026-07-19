@@ -192,6 +192,10 @@ enum KnowledgeSourceType {
 enum KnowledgeSourceStatus {
   PROCESSING
   PROCESSED
+  /// Real parsing was attempted and failed (e.g. a Content Sheet CSV with no valid rows) — an
+  /// honest terminal state rather than leaving it stuck at PROCESSING forever (docs/03 "no engine
+  /// or ingestion step may silently fail without a visible status").
+  FAILED
 }
 
 model KnowledgeSource {
@@ -202,6 +206,11 @@ model KnowledgeSource {
   type       KnowledgeSourceType
   /// Object storage path (Supabase Storage) — file contents never live in Postgres.
   storagePath String?              @map("storage_path")
+  /// Structured, parsed form of the source file — currently only populated for CONTENT_SHEETS
+  /// (an array of {page, element, expectedText} rows; see packages/core/src/content-sheet.ts).
+  /// Parsed once at upload time so the Content Engine never re-parses CSV mid-audit — same
+  /// caching rationale as FigmaFileCache.
+  parsedContent Json?              @map("parsed_content")
   uploadedBy String                @map("uploaded_by")
   uploadedAt DateTime              @default(now()) @map("uploaded_at")
   status     KnowledgeSourceStatus @default(PROCESSING)

@@ -6,5 +6,8 @@ export * from "./figma-cache";
 export * from "./screenshot-history";
 export * from "./report-storage";
 export * from "./engine-config";
+export * from "./text-similarity";
+export * from "./content-sheet";
+export * from "./knowledge-storage";
 export * from "./ai/types";
 export * from "./ai/resolver";

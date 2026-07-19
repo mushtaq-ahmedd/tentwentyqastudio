@@ -2,6 +2,7 @@
  * Prisma row -> frontend type converters. Keeps the enum-casing/shape translation in one place
  * so every lib/api/*.ts file stays focused on querying, not reshaping.
  */
+import type { ContentSheetParseResult } from "@tentwenty/core";
 import type {
   Prisma,
   Project as DbProject,
@@ -211,8 +212,15 @@ export function toEnvironment(e: DbEnvironment): Environment {
   };
 }
 
+const KNOWLEDGE_STATUS: Record<DbKnowledgeSource["status"], KnowledgeSource["status"]> = {
+  PROCESSING: "Processing",
+  PROCESSED: "Processed",
+  FAILED: "Failed",
+};
+
 export function toKnowledgeSource(k: DbKnowledgeSource): KnowledgeSource {
   const type = KNOWLEDGE_TYPE[k.type];
+  const parsed = k.parsedContent as ContentSheetParseResult | null;
   return {
     id: k.id,
     projectId: k.projectId,
@@ -221,7 +229,8 @@ export function toKnowledgeSource(k: DbKnowledgeSource): KnowledgeSource {
     icon: KNOWLEDGE_ICON[type],
     uploadedBy: k.uploadedBy,
     uploadedAt: k.uploadedAt.toISOString(),
-    status: k.status === "PROCESSED" ? "Processed" : "Processing",
+    status: KNOWLEDGE_STATUS[k.status],
+    parseErrors: k.status === "FAILED" ? (parsed?.errors ?? null) : null,
   };
 }
 

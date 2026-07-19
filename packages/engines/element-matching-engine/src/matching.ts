@@ -10,7 +10,7 @@
  * Engine's job and doesn't exist yet). Position/size/type/role/visual-similarity are real gaps,
  * not oversights — see the README.
  */
-import type { DomElement, ElementMatch, FigmaElement, FigmaFrame } from "@tentwenty/core";
+import { textSimilarity, type DomElement, type ElementMatch, type FigmaElement, type FigmaFrame } from "@tentwenty/core";
 
 /** Below this normalized edit-distance similarity, two text strings are not considered a match —
  * high enough to tolerate minor punctuation/whitespace differences, not so low that unrelated
@@ -21,32 +21,7 @@ export const MATCH_THRESHOLD = 0.82;
  * to comparing against every element in the file when nothing clears it. */
 export const FRAME_MATCH_THRESHOLD = 0.5;
 
-function normalize(text: string): string {
-  return text.toLowerCase().trim().replace(/\s+/g, " ");
-}
-
-/** Standard Levenshtein edit-distance ratio (0 = no similarity, 1 = identical after
- * normalization) — a small, well-understood algorithm rather than an external dependency. */
-export function textSimilarity(a: string, b: string): number {
-  const s1 = normalize(a);
-  const s2 = normalize(b);
-  if (s1 === s2) return 1;
-  if (!s1 || !s2) return 0;
-
-  const dp: number[][] = Array.from({ length: s1.length + 1 }, () => new Array(s2.length + 1).fill(0));
-  for (let i = 0; i <= s1.length; i++) dp[i][0] = i;
-  for (let j = 0; j <= s2.length; j++) dp[0][j] = j;
-  for (let i = 1; i <= s1.length; i++) {
-    for (let j = 1; j <= s2.length; j++) {
-      dp[i][j] =
-        s1[i - 1] === s2[j - 1]
-          ? dp[i - 1][j - 1]
-          : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
-    }
-  }
-  const distance = dp[s1.length][s2.length];
-  return 1 - distance / Math.max(s1.length, s2.length);
-}
+export { textSimilarity };
 
 /** Picks the Figma frame whose name best matches the page's name; returns `null` if nothing
  * clears `FRAME_MATCH_THRESHOLD` (caller should then compare against every element in the file). */

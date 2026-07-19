@@ -35,13 +35,38 @@ export function UploadKnowledgeSourceModal({
   const [method, setMethod] = React.useState<"file" | "text">(initialMethod);
   const [type, setType] = React.useState<KnowledgeSourceType>("Requirements Document");
   const [filename, setFilename] = React.useState("");
+  const [file, setFile] = React.useState<File | null>(null);
+  const [pastedText, setPastedText] = React.useState("");
   const [pending, setPending] = React.useState(false);
+
+  const isContentSheet = type === "Content Sheets";
 
   async function handleSave() {
     if (!projectId) return;
+    if (isContentSheet && method === "file" && !file) {
+      toast.error("Select a CSV file to upload.");
+      return;
+    }
+    if (isContentSheet && method === "text" && !pastedText.trim()) {
+      toast.error("Paste CSV content before saving.");
+      return;
+    }
     setPending(true);
-    const name = method === "file" ? filename || "New_Document.pdf" : "Pasted Content.txt";
-    const result = await addKnowledgeSourceAction({ projectId, name, type, uploadedBy: "You" });
+    const name = isContentSheet
+      ? method === "file"
+        ? (file?.name ?? "content-sheet.csv")
+        : "Pasted Content Sheet.csv"
+      : method === "file"
+        ? filename || "New_Document.pdf"
+        : "Pasted Content.txt";
+    const result = await addKnowledgeSourceAction({
+      projectId,
+      name,
+      type,
+      uploadedBy: "You",
+      file: isContentSheet && method === "file" ? (file ?? undefined) : undefined,
+      pastedText: isContentSheet && method === "text" ? pastedText : undefined,
+    });
     setPending(false);
     if (!result.success) {
       toast.error(result.error.message);
@@ -78,22 +103,48 @@ export function UploadKnowledgeSourceModal({
           </Tabs>
 
           {method === "file" ? (
-            <div className="rounded-card border-[1.5px] border-dashed border-border-strong bg-bg-surface-secondary p-8 text-center text-[12.5px] text-text-secondary">
-              <div className="mb-2.5">Drag a file here, or</div>
-              <Input
-                className="mx-auto mb-2.5 w-[70%]"
-                placeholder="Checkout_Test_Cases.xlsx"
-                value={filename}
-                onChange={(e) => setFilename(e.target.value)}
-              />
-              <div className="flex flex-wrap justify-center gap-1">
-                {FILE_TYPES.map((t) => (
-                  <span key={t} className="rounded bg-bg-surface px-2 py-0.5 text-[10.5px] text-text-secondary ring-1 ring-border-default">
-                    {t}
-                  </span>
-                ))}
+            isContentSheet ? (
+              <div className="rounded-card border-[1.5px] border-dashed border-border-strong bg-bg-surface-secondary p-8 text-center text-[12.5px] text-text-secondary">
+                <div className="mb-2.5">
+                  {file ? <span className="font-medium text-text-primary">{file.name}</span> : "Choose a CSV file"}
+                </div>
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="mx-auto block text-[12.5px]"
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                />
+                <div className="mt-2.5 text-[11px]">
+                  Required columns: <span className="font-medium">Page</span>,{" "}
+                  <span className="font-medium">Expected Text</span> (an optional{" "}
+                  <span className="font-medium">Element</span> column is also supported).
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-card border-[1.5px] border-dashed border-border-strong bg-bg-surface-secondary p-8 text-center text-[12.5px] text-text-secondary">
+                <div className="mb-2.5">Drag a file here, or</div>
+                <Input
+                  className="mx-auto mb-2.5 w-[70%]"
+                  placeholder="Checkout_Test_Cases.xlsx"
+                  value={filename}
+                  onChange={(e) => setFilename(e.target.value)}
+                />
+                <div className="flex flex-wrap justify-center gap-1">
+                  {FILE_TYPES.map((t) => (
+                    <span key={t} className="rounded bg-bg-surface px-2 py-0.5 text-[10.5px] text-text-secondary ring-1 ring-border-default">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )
+          ) : isContentSheet ? (
+            <Textarea
+              rows={6}
+              placeholder={"Page,Element,Expected Text\n/pricing,H1,Simple pricing for every team"}
+              value={pastedText}
+              onChange={(e) => setPastedText(e.target.value)}
+            />
           ) : (
             <Textarea rows={6} placeholder="Paste requirements, test cases, or business rules as plain text..." />
           )}

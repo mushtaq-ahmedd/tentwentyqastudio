@@ -9,8 +9,19 @@ export async function addKnowledgeSourceAction(input: {
   name: string;
   type: KnowledgeSourceType;
   uploadedBy: string;
+  file?: File;
+  pastedText?: string;
 }): Promise<ApiResponse<KnowledgeSource>> {
-  const result = await knowledgeApi.addKnowledgeSource(input);
+  const fileBuffer = input.file ? Buffer.from(await input.file.arrayBuffer()) : undefined;
+  const result = await knowledgeApi.addKnowledgeSource({
+    projectId: input.projectId,
+    name: input.name,
+    type: input.type,
+    uploadedBy: input.uploadedBy,
+    fileBuffer,
+    fileContentType: input.file?.type,
+    pastedText: input.pastedText,
+  });
   revalidatePath(`/projects/${input.projectId}/knowledge`);
   return result;
 }

@@ -188,6 +188,31 @@
 > audit against an Environment with no override, on a Project with `defaultViewport: "Tablet
 > (768x1024)"` set directly in Postgres, produced a 768x1024 screenshot — confirming the
 > Environment -> Project -> Global fallback chain, not just a two-level override.
+>
+> **Content Validation Mode 1** ("Content Sheet -> Website comparison") is now implemented,
+> completing the Content Engine (`content-engine` v0.2.0, previously Mode 2-only). docs/04/docs/02
+> name this mode but specify no file format, column schema, or matching rule — a genuine spec gap.
+> The invented contract: a CSV with `Page`/`Expected Text` required columns (`Element` optional),
+> parsed once at upload time (`packages/core/src/content-sheet.ts`) and stored as structured JSON
+> on `KnowledgeSource.parsedContent` — a new `KnowledgeSourceStatus.FAILED` value was added so a
+> CSV with zero valid rows gets an honest terminal status (with the specific parse errors surfaced
+> in the Knowledge page) instead of sitting at `PROCESSING` forever. The Orchestrator resolves the
+> project's most recent `PROCESSED` Content Sheet once per audit onto
+> `EngineContext.configuration.contentSheetRows`; the Content Engine matches each row's page (by
+> URL path, not full origin — `matchesPagePath`) and scores every DOM element on that page against
+> the row's `Expected Text` via a shared `textSimilarity` (Levenshtein ratio) — this function was
+> moved from `element-matching-engine` into `packages/core` since both engines now need the same
+> "how close is this text to that text" primitive, rather than maintaining two copies. Real file
+> upload (and "paste as text") is now wired end-to-end for the `KnowledgeSource` "Content Sheets"
+> type specifically — a new private `knowledge-sources` Supabase Storage bucket holds the raw CSV
+> — while every other `KnowledgeSourceType` remains the pre-existing upload mock (deferred bug
+> list; deliberately not fixed here, out of this feature's scope). **Live-verified** end-to-end: a
+> real CSV (one exact-match row, one 45%-similar row, one row for text absent from the page) was
+> uploaded through the real UI, parsed into 3 structured rows with `status: PROCESSED`, and a real
+> audit against a fixture page produced exactly 2 findings — "Content Mismatch" (45% similarity,
+> both expected/actual text quoted) and "Missing Expected Content" (nothing on the page came
+> close) — with the exact-match row correctly producing zero findings, confirming matching content
+> is never treated as evidence of a problem.
 
 ## Architecture Philosophy
 

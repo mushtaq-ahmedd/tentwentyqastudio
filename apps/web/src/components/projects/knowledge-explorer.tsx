@@ -89,8 +89,23 @@ export function KnowledgeExplorer({ projectId, sources }: { projectId: string; s
           <div className="mb-4.5 flex gap-5 text-xs text-text-secondary">
             <span>Type: <span className="text-text-primary">{selected.type}</span></span>
             <span>Uploaded by: <span className="text-text-primary">{selected.uploadedBy}</span></span>
-            <span>Status: <Badge variant={selected.status === "Processed" ? "accepted" : "medium"}>{selected.status}</Badge></span>
+            <span>
+              Status:{" "}
+              <Badge variant={selected.status === "Processed" ? "accepted" : selected.status === "Failed" ? "critical" : "medium"}>
+                {selected.status}
+              </Badge>
+            </span>
           </div>
+          {selected.status === "Failed" && selected.parseErrors && selected.parseErrors.length > 0 && (
+            <div className="mb-4.5 rounded-card border border-error-subtle bg-error-subtle p-3 text-xs text-error-subtle-text">
+              <div className="mb-1 font-semibold">Couldn&apos;t parse this content sheet:</div>
+              <ul className="list-disc pl-4">
+                {selected.parseErrors.slice(0, 5).map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="mb-2 text-xs font-semibold">AI Understanding — built from all uploaded sources</div>
           <div className="flex flex-col gap-2.5 text-[13.5px]">
             <p className="text-text-secondary">

@@ -57,5 +57,8 @@ export type KnowledgeSource = {
   icon: "doc" | "sheet" | "checklist" | "figma";
   uploadedBy: string;
   uploadedAt: string;
-  status: "Processing" | "Processed";
+  status: "Processing" | "Processed" | "Failed";
+  // Only populated for Content Sheets that failed to parse — surfaced so the uploader can fix
+  // and re-upload their CSV (packages/core/src/content-sheet.ts).
+  parseErrors: string[] | null;
 };

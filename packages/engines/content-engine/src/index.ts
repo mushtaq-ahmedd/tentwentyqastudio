@@ -1,6 +1,9 @@
 import * as cheerio from "cheerio";
 import {
+  matchesPagePath,
   registerEngine,
+  textSimilarity,
+  type ContentSheetRow,
   type Engine,
   type EngineContext,
   type EngineEvidence,
@@ -8,11 +11,25 @@ import {
 } from "@tentwenty/core";
 
 /**
- * docs/04 Content Engine, Mode 2 only: "Website-only grammar/readability/placeholder detection
- * (no content sheet required)". Mode 1 (Content Sheet → Website comparison) needs an approved
- * content document to compare against, which doesn't exist as a concept in the product yet — not
- * implemented here, not faked.
+ * docs/04 Content Engine, two modes:
+ *  - Mode 2 (below, unconditional): "Website-only grammar/readability/placeholder detection (no
+ *    content sheet required)".
+ *  - Mode 1 ("Content Sheet -> Website comparison", see `runContentSheetChecks` below): runs only
+ *    when the project has a successfully parsed Content Sheet (`context.configuration
+ *    .contentSheetRows`, resolved by the Orchestrator from the most recent PROCESSED
+ *    CONTENT_SHEETS KnowledgeSource). docs never specify a file format or matching rule for this
+ *    mode — see packages/core/src/content-sheet.ts's header comment for the invented contract
+ *    (CSV, "Page"/"Element"/"Expected Text" columns, page matched by URL path).
  */
+
+/** Below this text-similarity score, a DOM element isn't considered a plausible match for a
+ * content sheet row's expected text — higher than Element Matching's 0.82 (`MATCH_THRESHOLD`)
+ * since a content sheet's "Expected Text" is meant to be the literal approved copy, not just a
+ * visually-similar design label. */
+const CONTENT_MATCH_THRESHOLD = 0.85;
+/** Below this, no DOM element is even loosely related — treated as "not found on the page at
+ * all" rather than "found but differs". */
+const NOT_FOUND_THRESHOLD = 0.3;
 const PLACEHOLDER_PATTERNS: { label: string; pattern: RegExp }[] = [
   { label: "Lorem Ipsum", pattern: /lorem ipsum/i },
   { label: "placeholder marker", pattern: /\b(TBD|TODO|FIXME)\b/ },
@@ -59,12 +76,58 @@ function findingBase(context: EngineContext): Pick<EngineFinding, "pageUrl" | "e
   return { pageUrl: context.page!.url, engine: "CONTENT" };
 }
 
+/**
+ * Mode 1: for each content-sheet row mapped to this page, finds the best-matching DOM element
+ * (by text similarity) and raises a finding when nothing clears `CONTENT_MATCH_THRESHOLD`. No
+ * finding is raised for rows that match — matching content isn't evidence of a problem.
+ */
+function runContentSheetChecks(context: EngineContext, domElements: { text: string }[]): EngineFinding[] {
+  const rows = context.configuration.contentSheetRows as ContentSheetRow[] | null;
+  if (!rows || rows.length === 0) return [];
+
+  const pageRows = rows.filter((row) => matchesPagePath(row.page, context.page!.url));
+  const findings: EngineFinding[] = [];
+
+  for (const row of pageRows) {
+    let best: { text: string; score: number } | null = null;
+    for (const el of domElements) {
+      const score = textSimilarity(row.expectedText, el.text);
+      if (!best || score > best.score) best = { text: el.text, score };
+    }
+    if (best && best.score >= CONTENT_MATCH_THRESHOLD) continue; // matches — nothing to report.
+
+    const notFound = !best || best.score < NOT_FOUND_THRESHOLD;
+    const label = row.element ? ` (${row.element})` : "";
+    findings.push({
+      ...findingBase(context),
+      severity: notFound ? "HIGH" : "MEDIUM",
+      confidence: notFound ? 0.95 : 0.85,
+      category: notFound ? "Missing Expected Content" : "Content Mismatch",
+      title: notFound
+        ? `Expected content not found on this page${label}`
+        : `Content differs from the approved content sheet${label}`,
+      description: notFound
+        ? `The approved text "${row.expectedText}" was not found anywhere on this page.`
+        : `The approved text "${row.expectedText}" most closely matches "${best!.text}" on this page (${Math.round(best!.score * 100)}% similar), below the ${Math.round(CONTENT_MATCH_THRESHOLD * 100)}% threshold for a match.`,
+      expectedResult: row.expectedText,
+      actualResult: best ? best.text : "(not found on page)",
+      businessImpact:
+        "Content shown to real users doesn't match the approved content sheet, risking incorrect or unapproved messaging going live.",
+      suggestedResolution:
+        "Update the page content to match the approved content sheet, or update the content sheet if this change was intentional.",
+      evidence: [],
+    });
+  }
+
+  return findings;
+}
+
 export const contentEngine: Engine = {
   id: "content-engine",
   name: "CONTENT",
-  version: "0.1.0",
+  version: "0.2.0",
   description:
-    "Deterministic website-only content checks: placeholder text, empty headings, missing page title (docs/04 Content Engine, Mode 2).",
+    "Deterministic content checks: placeholder text/empty headings/missing page title (Mode 2, always on), plus Content Sheet -> Website comparison when a parsed Content Sheet is available (Mode 1, docs/04).",
   dependencies: ["browser-engine"],
   supportedValidationTypes: ["CONTENT_VALIDATION", "GRAMMAR_VALIDATION"],
   scope: "page",
@@ -131,6 +194,8 @@ export const contentEngine: Engine = {
         evidence: [],
       });
     }
+
+    findings.push(...runContentSheetChecks(context, artifacts.domElements));
 
     return findings;
   },
