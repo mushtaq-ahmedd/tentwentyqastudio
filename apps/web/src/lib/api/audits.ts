@@ -112,6 +112,10 @@ export async function startAudit(input: {
             // "always included" treatment as Discovery/Report, not user-selectable.
             { engine: "BROWSER", status: "WAITING" },
             ...engineNames.map((engine) => ({ engine: engine as never, status: "WAITING" as const })),
+            // Blends every Finding's confidence after Validation engines run (docs/03 "no single
+            // Engine decides the final confidence") — unconditional, not user-selectable, same
+            // treatment as Discovery/Browser/Report.
+            { engine: "CONFIDENCE", status: "WAITING" },
             { engine: "REPORT", status: "WAITING" },
           ],
         },

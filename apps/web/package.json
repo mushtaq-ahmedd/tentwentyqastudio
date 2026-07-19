@@ -13,6 +13,7 @@
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.7",
     "@tentwenty/browser-engine": "workspace:*",
+    "@tentwenty/confidence-engine": "workspace:*",
     "@tentwenty/content-engine": "workspace:*",
     "@tentwenty/core": "workspace:*",
     "@tentwenty/db": "workspace:*",

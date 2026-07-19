@@ -67,6 +67,17 @@
 > to compare against without them — same treatment `Figma Comparison` alone already had. Not
 > live-verified for the same reason as Figma/Element Matching (no real Figma personal access token
 > supplied yet).
+>
+> **Confidence** (`confidence-engine`) also exists now — the first Processing-category engine
+> (docs/03 "no single Engine decides the final confidence"). Unconditionally included on every
+> audit, it re-scores every Finding after Validation engines run, blending in two signals no
+> single Validation engine can see on its own: evidence completeness (2+ evidence items, +0.02)
+> and cross-audit recurrence (same project/engine/category seen in an earlier audit, +0.03),
+> capped at 0.99. Boost-only by design — see its README for why a penalty signal isn't attempted
+> yet. **Live-verified**, unlike the three engines above it: running a second real audit against
+> the same lipsum.com environment showed the exact predicted math — Content Engine's 0.97
+> baseline confidence became 0.99 (both bonuses fired, capped) on the recurrence of the same
+> "Placeholder Content" category finding.
 
 ## Architecture Philosophy
 
