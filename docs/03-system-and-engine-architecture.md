@@ -138,6 +138,28 @@
 > `COMPLETED` and nothing else is affected. The success path (a real Anthropic call) is not
 > live-verified — same gap as the Figma Engine's success path, needs a real API key nobody has
 > supplied yet.
+>
+> **Report** (`report-engine`) is the pipeline capstone — it's a Processing engine that depends on
+> `ai-engine` and produces `Report` rows, not `Finding` rows (`validate()` returns `[]`). Generates
+> four real files per audit: Developer Report (PDF, full findings detail with embedded
+> screenshots), Management Report (PDF, stats + Critical/High findings only), Executive Summary
+> (PDF, high-level + the AI executive summary text), and a Findings Export (CSV, flat data dump).
+> PDFs are rendered via Playwright's `page.pdf()` against hand-written HTML/CSS — not Puppeteer,
+> which docs/08 explicitly lists as "intentionally avoided" in V1; Playwright was already the
+> sanctioned tool via the Browser Engine, so no new rendering dependency was introduced. Closed a
+> real schema gap mid-build: the pre-existing `Report` model had a `type` (Developer/Management/
+> Executive) but no way to distinguish "as PDF" from "as CSV" beyond guessing from the file
+> extension, so a `ReportFormat` enum (`PDF`/`CSV`) and `Report.format` column were added. Reports
+> are stored in their own private `reports` Supabase Storage bucket (`report-storage.ts`),
+> deliberately separate from the per-finding `evidence` bucket — a report is a whole-audit document,
+> not proof attached to a single finding. Unconditionally included on every audit, same as
+> Discovery/Browser/Confidence/Visual/AI. **Fully live-verified**, unlike the Figma-chain and AI
+> Engine success paths — Report Engine needs no external third-party credentials, so a real audit
+> was run end-to-end and confirmed via direct DB/Storage inspection: all 4 `Report` rows created
+> with correct type/format combinations and titles, all 4 files uploaded with real, substantial
+> sizes and correct MIME types (the Developer PDF opened and inspected directly is a genuine
+> single-page PDF 1.4 document with correct title metadata), and the project Reports page renders
+> all 4 with working signed-URL Open/Download links.
 
 ## Architecture Philosophy
 

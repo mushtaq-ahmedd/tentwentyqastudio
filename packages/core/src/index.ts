@@ -4,5 +4,6 @@ export * from "./orchestrator";
 export * from "./storage";
 export * from "./figma-cache";
 export * from "./screenshot-history";
+export * from "./report-storage";
 export * from "./ai/types";
 export * from "./ai/resolver";

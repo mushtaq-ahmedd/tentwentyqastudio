@@ -13,3 +13,4 @@ import "@tentwenty/ui-validation-engine";
 import "@tentwenty/confidence-engine";
 import "@tentwenty/visual-engine";
 import "@tentwenty/ai-engine";
+import "@tentwenty/report-engine";

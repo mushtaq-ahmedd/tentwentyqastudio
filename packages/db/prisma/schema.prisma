@@ -409,19 +409,32 @@ enum ReportType {
   EXECUTIVE
 }
 
+/// docs/04 Report Engine "Formats: PDF, HTML, CSV" — HTML isn't a separately generated/downloaded
+/// artifact here (the app already renders an equivalent in-browser view live from Audit+Finding
+/// data); PDF and CSV are the two real generated files, so those are the two implemented values.
+enum ReportFormat {
+  PDF
+  CSV
+}
+
 model Report {
-  id            String     @id @default(uuid()) @db.Uuid
-  auditId       String     @map("audit_id") @db.Uuid
-  audit         Audit      @relation(fields: [auditId], references: [id], onDelete: Cascade)
-  projectId     String     @map("project_id") @db.Uuid
-  project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id            String       @id @default(uuid()) @db.Uuid
+  auditId       String       @map("audit_id") @db.Uuid
+  audit         Audit        @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  projectId     String       @map("project_id") @db.Uuid
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   type          ReportType
+  /// Phase B addition — the schema originally had no way to distinguish "Developer Report as
+  /// PDF" from "Developer Report as CSV" beyond the storage path's file extension. Defaults to
+  /// PDF so existing rows/call sites created before this field remain valid.
+  format        ReportFormat @default(PDF)
   title         String
-  /// PDF/HTML/CSV file in Supabase Storage — never generated on demand from a stale audit.
-  storagePath   String?    @map("storage_path")
-  generatedById String     @map("generated_by_id") @db.Uuid
-  generatedBy   User       @relation("ReportGeneratedBy", fields: [generatedById], references: [id])
-  generatedAt   DateTime   @default(now()) @map("generated_at")
+  /// PDF/CSV file in Supabase Storage (a dedicated `reports` bucket, not the `evidence` one) —
+  /// never generated on demand from a stale audit.
+  storagePath   String?      @map("storage_path")
+  generatedById String       @map("generated_by_id") @db.Uuid
+  generatedBy   User         @relation("ReportGeneratedBy", fields: [generatedById], references: [id])
+  generatedAt   DateTime     @default(now()) @map("generated_at")
 
   @@index([auditId])
   @@index([projectId])

@@ -29,6 +29,7 @@ import type {
   Project,
   ProjectStatus,
   Report,
+  ReportFormat,
   ReportType,
   Severity,
   UserRole,
@@ -142,6 +143,11 @@ const REPORT_TYPE: Record<DbReport["type"], ReportType> = {
   DEVELOPER: "developer",
   MANAGEMENT: "management",
   EXECUTIVE: "executive",
+};
+
+const REPORT_FORMAT: Record<DbReport["format"], ReportFormat> = {
+  PDF: "pdf",
+  CSV: "csv",
 };
 
 const USER_ROLE: Record<DbUser["role"], UserRole> = {
@@ -295,9 +301,13 @@ export function toReport(r: ReportWithProject): Report {
     projectId: r.projectId,
     projectName: r.project.name,
     type: REPORT_TYPE[r.type],
+    format: REPORT_FORMAT[r.format],
     title: r.title,
     generatedAt: r.generatedAt.toISOString(),
     generatedBy: r.generatedBy.name,
+    // Resolved by fetchReports() from the raw storagePath (not exposed on this type directly) —
+    // requires an async Storage call this pure mapper can't make.
+    downloadUrl: null,
   };
 }
 

@@ -22,6 +22,7 @@
     "@tentwenty/element-matching-engine": "workspace:*",
     "@tentwenty/figma-engine": "workspace:*",
     "@tentwenty/functional-engine": "workspace:*",
+    "@tentwenty/report-engine": "workspace:*",
     "@tentwenty/ui-validation-engine": "workspace:*",
     "@tentwenty/visual-engine": "workspace:*",
     "class-variance-authority": "^0.7.1",

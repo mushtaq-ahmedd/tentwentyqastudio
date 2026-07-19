@@ -53,6 +53,9 @@ importers:
       '@tentwenty/functional-engine':
         specifier: workspace:*
         version: link:../../packages/engines/functional-engine
+      '@tentwenty/report-engine':
+        specifier: workspace:*
+        version: link:../../packages/engines/report-engine
       '@tentwenty/ui-validation-engine':
         specifier: workspace:*
         version: link:../../packages/engines/ui-validation-engine
@@ -288,6 +291,25 @@ importers:
       '@tentwenty/db':
         specifier: workspace:*
         version: link:../../db
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.43
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/engines/report-engine:
+    dependencies:
+      '@tentwenty/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@tentwenty/db':
+        specifier: workspace:*
+        version: link:../../db
+      playwright:
+        specifier: ^1.48.0
+        version: 1.61.1
     devDependencies:
       '@types/node':
         specifier: ^20

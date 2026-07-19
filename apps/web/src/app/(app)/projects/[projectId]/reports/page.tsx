@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { reportsApi } from "@/lib/api";
@@ -35,9 +34,28 @@ export default async function ProjectReportsPage({
                   <td className="py-3 text-text-secondary">{formatRelativeTime(report.generatedAt)}</td>
                   <td className="py-3">{report.generatedBy}</td>
                   <td className="py-3">
-                    <Link href="/reports" className="font-medium text-accent-default hover:underline">Open</Link>
-                    <span className="mx-1.5 text-border-strong">&middot;</span>
-                    <span className="font-medium text-accent-default">Download</span>
+                    {report.downloadUrl ? (
+                      <>
+                        <a
+                          href={report.downloadUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-medium text-accent-default hover:underline"
+                        >
+                          Open
+                        </a>
+                        <span className="mx-1.5 text-border-strong">&middot;</span>
+                        <a
+                          href={report.downloadUrl}
+                          download
+                          className="font-medium text-accent-default hover:underline"
+                        >
+                          Download
+                        </a>
+                      </>
+                    ) : (
+                      <span className="text-text-secondary">File unavailable</span>
+                    )}
                   </td>
                 </tr>
               ))}
