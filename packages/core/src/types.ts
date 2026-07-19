@@ -42,6 +42,23 @@ export type BrokenLink = {
 };
 
 /**
+ * One top-level frame or component extracted from a Figma file (docs/04 Figma Engine: "extract
+ * frames/components, prepare design data for comparison"). Only top-level nodes within each
+ * Figma "page" (a CANVAS node — Figma's own term, unrelated to our `Page`/website-page model) are
+ * captured; the full recursive node tree inside a frame is deferred until the Element Matching
+ * Engine actually needs it (not built yet).
+ */
+export type FigmaFrame = {
+  id: string;
+  name: string;
+  type: string;
+  absoluteBoundingBox: { x: number; y: number; width: number; height: number } | null;
+  /** The Figma CANVAS (page) this frame belongs to — distinct from our own Page model. */
+  figmaPageId: string;
+  figmaPageName: string;
+};
+
+/**
  * Data that Collection engines (Discovery/Browser/Figma) hand forward to later engines —
  * docs/03 "Engines must not request data directly from other Engines — only from the shared
  * input the Core Platform provides." Extended as Browser/Figma engines are built.
@@ -52,6 +69,8 @@ export type SharedResources = {
   pageArtifacts?: Record<string, BrowserPageArtifacts>;
   /** Populated by the Discovery Engine while crawling — read by the Functional Engine. */
   brokenLinks?: BrokenLink[];
+  /** Populated by the Figma Engine — read by the (not yet built) Element Matching Engine. */
+  figmaFrames?: FigmaFrame[];
   [key: string]: unknown;
 };
 

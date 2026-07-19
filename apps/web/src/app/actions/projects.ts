@@ -15,6 +15,17 @@ export async function createProjectAction(input: {
   return result;
 }
 
+export async function connectFigmaAction(input: {
+  projectId: string;
+  figmaFileUrl: string;
+  figmaAccessToken: string;
+}): Promise<ApiResponse<{ project: Project; figmaFileName: string }>> {
+  const result = await projectsApi.connectFigma(input);
+  revalidatePath(`/projects/${input.projectId}`);
+  revalidatePath("/dashboard");
+  return result;
+}
+
 export async function archiveProjectAction(projectId: string): Promise<ApiResponse<null>> {
   const result = await projectsApi.archiveProject(projectId);
   revalidatePath("/projects");

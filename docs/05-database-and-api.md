@@ -21,7 +21,8 @@ Users → Projects → Environments → Audits → Pages → Findings → Eviden
 | Table | Purpose |
 |---|---|
 | `users` | User accounts |
-| `projects` | QA projects (name, description, base URL, Figma file, status, created by) |
+| `projects` | QA projects (name, description, base URL, Figma file, status, created by). Also carries `figma_access_token` (Phase B addition — needed to actually call the Figma REST API; plain string, same no-real-encryption gap as `environments.encrypted_creds`) |
+| `figma_file_cache` | Figma Engine's cache (Phase B addition, docs/03/04's "never re-download the same design repeatedly" rule) — one row per project/file, storing Figma's last-modified timestamp and the extracted frame/component structure, not the raw file |
 | `environments` | Dev/QA/UAT/Staging/Production per project (name, URL, browser config, auth settings) |
 | `audits` | One execution of tentwenty QA Studio (project, environment, status, start/end time, duration) |
 | `pages` | Pages validated within an audit (URL, page name, audit ID, validation status) |

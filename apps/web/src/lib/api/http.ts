@@ -3,6 +3,7 @@ import type { ApiErrorCode, ApiResponse } from "@/lib/types";
 
 const STATUS_BY_ERROR_CODE: Record<ApiErrorCode, number> = {
   VALIDATION_ERROR: 400,
+  FIGMA_VERIFICATION_FAILED: 422,
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
   PROJECT_NOT_FOUND: 404,

@@ -15,17 +15,6 @@ export async function addKnowledgeSourceAction(input: {
   return result;
 }
 
-export async function connectFigmaAction(projectId: string): Promise<ApiResponse<KnowledgeSource>> {
-  const result = await knowledgeApi.addKnowledgeSource({
-    projectId,
-    name: "Homepage.fig",
-    type: "Figma Design",
-    uploadedBy: "You",
-  });
-  revalidatePath(`/projects/${projectId}/knowledge`);
-  return result;
-}
-
 export async function deleteKnowledgeSourceAction(
   projectId: string,
   sourceId: string

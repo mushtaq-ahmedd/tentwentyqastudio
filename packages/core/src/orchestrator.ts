@@ -20,7 +20,7 @@ const MAX_RETRIES = 2;
 export async function runAudit(auditId: string): Promise<void> {
   const audit = await prisma.audit.findUnique({
     where: { id: auditId },
-    include: { environment: true, engineResults: true },
+    include: { environment: true, engineResults: true, project: true },
   });
   if (!audit) throw new Error(`Audit ${auditId} not found.`);
 
@@ -41,7 +41,13 @@ export async function runAudit(auditId: string): Promise<void> {
       url: audit.environment.url,
       loginUrl: audit.environment.loginUrl,
     },
-    configuration: {},
+    // Engine Input's "Configuration" field (docs/03) — project-level settings an Engine needs
+    // but shouldn't fetch itself (docs/03: engines read only from the shared input the Core
+    // Platform provides). Extend here as more engines need more project config.
+    configuration: {
+      figmaFileUrl: audit.project.figmaFileUrl,
+      figmaAccessToken: audit.project.figmaAccessToken,
+    },
     sharedResources: {},
   };
 

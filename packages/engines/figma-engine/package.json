@@ -1,0 +1,15 @@
+{
+  "name": "@tentwenty/figma-engine",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@tentwenty/core": "workspace:*",
+    "@tentwenty/db": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}

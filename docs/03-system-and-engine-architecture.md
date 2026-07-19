@@ -29,9 +29,18 @@
 > verified live against lipsum.com's real Lorem Ipsum content), **Functional**
 > (`functional-engine`, page-scoped, broken-link findings only — the one check in docs/04's
 > Functional Engine list achievable without actually driving the page; verified live with a real
-> 404 link against a local fixture server). Every other Engine's `EngineResult` row is created at
-> audit-start and stays `WAITING` — the Orchestrator deliberately leaves the audit honestly
-> `RUNNING` rather than faking a `COMPLETED` pipeline that didn't actually validate anything.
+> 404 link against a local fixture server), **Figma** (`figma-engine`, audit-scoped, real Figma
+> REST API — downloads/caches a project's connected file via `Project.figmaFileUrl`/
+> `figmaAccessToken`, extracts top-level frames/components into `sharedResources.figmaFrames` for
+> the not-yet-built Element Matching Engine to consume later. The real "Connect Figma" flow
+> (file URL + personal access token, verified against Figma's API before saving) replaces the
+> earlier hardcoded UI stub. Only the failure path is live-verified so far — a bad token is
+> genuinely rejected by Figma's API and nothing gets persisted; the success path (real frame
+> extraction + `FigmaFileCache` reuse) is built and typechecked but not yet run against a real
+> Figma file, since that needs a real personal access token no one has supplied yet). Every other
+> Engine's `EngineResult` row is created at audit-start and stays `WAITING` — the Orchestrator
+> deliberately leaves the audit honestly `RUNNING` rather than faking a `COMPLETED` pipeline that
+> didn't actually validate anything.
 
 ## Architecture Philosophy
 

@@ -1,4 +1,5 @@
 import { prisma } from "@tentwenty/db";
+import { verifyFigmaAccess } from "@tentwenty/core";
 import type { ApiResponse, Project } from "@/lib/types";
 import { requireNotViewer, requireUser } from "@/lib/auth/session";
 import { fail, guarded, ok } from "./client";
@@ -97,6 +98,38 @@ export async function createProject(input: {
     });
     const [withAgg] = await withAggregates([project]);
     return ok(toProject(withAgg), "Project created successfully.");
+  });
+}
+
+/**
+ * Real "Connect Figma" flow — replaces the earlier hardcoded stub. Verifies the token/file are
+ * actually valid against the real Figma API *before* persisting anything (same "Test Connection"
+ * pattern already used for Environments), so a bad token surfaces immediately rather than only
+ * when an audit runs.
+ */
+export async function connectFigma(input: {
+  projectId: string;
+  figmaFileUrl: string;
+  figmaAccessToken: string;
+}): Promise<ApiResponse<{ project: Project; figmaFileName: string }>> {
+  return guarded(async () => {
+    await requireNotViewer();
+    if (!input.figmaFileUrl.trim()) return fail("VALIDATION_ERROR", "Figma file URL is required.");
+    if (!input.figmaAccessToken.trim()) return fail("VALIDATION_ERROR", "Figma access token is required.");
+
+    let figmaFileName: string;
+    try {
+      ({ name: figmaFileName } = await verifyFigmaAccess(input.figmaFileUrl, input.figmaAccessToken));
+    } catch (err) {
+      return fail("FIGMA_VERIFICATION_FAILED", (err as Error).message);
+    }
+
+    const project = await prisma.project.update({
+      where: { id: input.projectId },
+      data: { figmaFileUrl: input.figmaFileUrl, figmaAccessToken: input.figmaAccessToken },
+    });
+    const [withAgg] = await withAggregates([project]);
+    return ok({ project: toProject(withAgg), figmaFileName }, "Figma connected successfully.");
   });
 }
 

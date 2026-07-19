@@ -67,6 +67,11 @@ model Project {
   clientName   String        @map("client_name") @default("")
   baseUrl      String        @map("base_url") @default("")
   figmaFileUrl String?       @map("figma_file_url")
+  /// Figma personal access token (docs/04 Figma Engine, docs/08 Figma REST API). Plain string —
+  /// same simplification as Environment.encryptedCreds below (the "encrypted" naming there is
+  /// aspirational; no real encryption-at-rest exists yet for either field). Never sent to the
+  /// client — read server-side only, by the Orchestrator when building an Engine's Configuration.
+  figmaAccessToken String?     @map("figma_access_token")
   status       ProjectStatus @default(NOT_READY)
   ownerId      String        @map("owner_id") @db.Uuid
   owner        User          @relation("ProjectOwner", fields: [ownerId], references: [id])
@@ -79,9 +84,31 @@ model Project {
   knowledgeSources  KnowledgeSource[]
   audits            Audit[]
   reports           Report[]
+  figmaFileCache    FigmaFileCache[]
 
   @@index([ownerId])
   @@map("projects")
+}
+
+/// Figma Engine cache (docs/04 "Rule: parsed Figma data must be cached — never re-download the
+/// same design repeatedly"; docs/08 names Redis for this, but per the same interim-simplification
+/// pattern as the Orchestrator's missing job queue, this uses Postgres — no cache infra is
+/// provisioned yet). `frames` stores the extracted top-level frame/component summary, not the
+/// raw Figma document tree (which can be many MB) — "prepare design data for comparison" (docs/04)
+/// implies a distilled structure, not an archive of the original file.
+model FigmaFileCache {
+  id           String   @id @default(uuid()) @db.Uuid
+  projectId    String   @map("project_id") @db.Uuid
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fileKey      String   @map("file_key")
+  /// Figma's own last-edited timestamp (from the cheap `/meta` endpoint) — compared against on
+  /// each audit to decide whether the full file needs re-fetching.
+  lastModified String   @map("last_modified")
+  frames       Json
+  fetchedAt    DateTime @default(now()) @map("fetched_at")
+
+  @@unique([projectId, fileKey])
+  @@map("figma_file_cache")
 }
 
 enum EnvironmentAuthStatus {
