@@ -1,0 +1,5 @@
+-- AlterEnum
+ALTER TYPE "EngineName" ADD VALUE 'BROWSER_VALIDATION';
+
+-- AlterEnum
+ALTER TYPE "ValidationType" ADD VALUE 'BROWSER_VALIDATION';

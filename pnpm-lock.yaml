@@ -29,6 +29,9 @@ importers:
       '@tentwenty/browser-engine':
         specifier: workspace:*
         version: link:../../packages/engines/browser-engine
+      '@tentwenty/browser-validation-engine':
+        specifier: workspace:*
+        version: link:../../packages/engines/browser-validation-engine
       '@tentwenty/confidence-engine':
         specifier: workspace:*
         version: link:../../packages/engines/confidence-engine
@@ -186,6 +189,22 @@ importers:
       playwright:
         specifier: ^1.48.0
         version: 1.61.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.43
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/engines/browser-validation-engine:
+    dependencies:
+      '@tentwenty/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@tentwenty/db':
+        specifier: workspace:*
+        version: link:../../db
     devDependencies:
       '@types/node':
         specifier: ^20

@@ -239,6 +239,7 @@ enum ValidationType {
   CONTENT_VALIDATION
   GRAMMAR_VALIDATION
   FUNCTIONAL_VALIDATION
+  BROWSER_VALIDATION
 }
 
 /// docs/03 Engine Categories — kept as one enum across Collection/Validation/Processing engines
@@ -252,6 +253,7 @@ enum EngineName {
   VISUAL
   CONTENT
   FUNCTIONAL
+  BROWSER_VALIDATION
   ACCESSIBILITY
   PERFORMANCE
   SECURITY

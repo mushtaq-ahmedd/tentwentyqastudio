@@ -2,67 +2,49 @@
 
 **Engine ID:** `functional-engine` · **Prisma name:** `FUNCTIONAL` · **Category:** Validation (docs/03)
 **Scope:** `page` — runs once per discovered page.
-**Dependencies:** `discovery-engine` (`sharedResources.brokenLinks`), `browser-engine`
-(`sharedResources.pageArtifacts` — console messages, network errors, screenshot).
+**Dependencies:** `discovery-engine` (`sharedResources.brokenLinks`), `browser-engine` (screenshot
+evidence only).
 **Supported validation types:** `Functional Validation`.
 
-## Responsibility (docs/04 Functional Engine + docs/02's "Browser Validation")
+## Responsibility (docs/04 Functional Engine)
 
-> Functional Engine (docs/04): "Validates: buttons, links, forms, navigation, search, upload,
-> download, pagination, filters, authentication, user interactions, validation messages,
-> success/error states. Rule: only deterministic functional validation — no speculative 'this
-> might be broken.'"
->
-> Browser Validation (docs/02, V1 scope): "console errors, network errors, failed requests,
-> broken resources, missing images."
+> "Validates: buttons, links, forms, navigation, search, upload, download, pagination, filters,
+> authentication, user interactions, validation messages, success/error states. Rule: only
+> deterministic functional validation — no speculative 'this might be broken.'"
 
-Browser Validation has no dedicated slot in docs/03's `EngineName` enum — no `BROWSER_VALIDATION`
-value exists. It's folded into this engine because it's the exact same pattern as the broken-link
-check below: judge data the Browser/Discovery engines already collected, deterministically, with
-no new capability required.
-
-Four checks, all deterministic, each aggregated into **one** Finding per page per check type
-(CLAUDE.md non-negotiable #3 — fewer trusted findings over many noisy ones):
+**One check implemented — broken links.** The rest of docs/04's list (forms, search, upload/
+download, pagination, filters, authentication, user interactions, validation/success/error
+messages) all require actually *driving* the page — clicking, typing, submitting — which is real
+browser interaction the Browser Engine doesn't do yet (it only renders and observes). Building
+those without that capability would mean guessing, which CLAUDE.md's non-negotiable #1 rules out.
+Not implemented, not faked.
 
 | Check | Category | Confidence | Severity | Data source |
 |---|---|---|---|---|
 | A same-origin link Discovery couldn't reach while crawling | Broken Link | 0.95 (High) | High | `sharedResources.brokenLinks` |
-| A JS error/uncaught exception logged during page load | Console Error | 0.90 (High) | High | `pageArtifacts.consoleMessages` |
-| A failed request whose URL looks like an image | Missing Image | 0.92 (High) | Medium | `pageArtifacts.networkErrors` |
-| A failed request for anything else (script, stylesheet, font, XHR/fetch) | Broken Resource | 0.92 (High) | High | `pageArtifacts.networkErrors` |
 
-Broken Link is scored a touch below the other three (0.95 vs 0.92) since an occasional broken
-link is more plausibly a transient network blip than the site's fault — a small but real
-ambiguity the other three checks (a JS error or failed resource load *during this exact page
-render*) don't have.
+0.95 confidence: an unreachable link during crawl is about as deterministic as this pipeline gets
+(Discovery either got a working response or it didn't) — there's no interpretation involved.
 
-**Not implemented** — the rest of docs/04's Functional Engine list (forms, search, upload/
-download, pagination, filters, authentication, user interactions, validation/success/error
-messages): all of it requires actually *driving* the page — clicking, typing, submitting — which
-is real browser interaction the Browser Engine doesn't do yet (it only renders and observes).
-Building those without that capability would mean guessing, which CLAUDE.md's non-negotiable #1
-rules out. Not implemented here, not faked.
+## History
+
+Previously this engine also covered console errors, missing images, and broken page resources —
+docs/02's separate "Browser Validation" V1 feature, folded in here because docs/03's `EngineName`
+enum had no dedicated slot for it. That was a **one-responsibility-per-Engine violation**
+(CLAUDE.md non-negotiable #4) rather than a deliberate design choice, and confusingly bundled two
+docs/02-distinct features behind a single "Functional Validation" checkbox with no way to run one
+without the other. Split out into `browser-validation-engine` with its own `EngineName`,
+`ValidationType`, and Audit Center checkbox.
 
 ## Evidence
 
-- **Broken Link**: each broken link already carries its own evidence (a text description of the
-  check — source page, target URL, HTTP status/error, timestamp — uploaded by Discovery at crawl
-  time, before any Page row exists yet), plus the page screenshot.
-- **Console Error**: the page's uploaded console log (`CONSOLE_LOGS`), plus screenshot.
-- **Missing Image / Broken Resource**: the page's uploaded network log (`NETWORK_LOGS`, which
-  contains every request's status/method/URL, not just the failed ones — so the reviewer can see
-  the failure in context), plus screenshot.
+Each broken link already carries its own evidence (a text description of the check — source page,
+target URL, HTTP status/error, timestamp — uploaded by Discovery at crawl time, before any Page row
+exists yet), plus the page screenshot (from the Browser Engine, referenced not re-derived).
 
 ## Known simplifications (flagged, not silent)
 
-- Broken Link: same-origin links only — see the Discovery Engine README's matching note.
-  Cross-origin broken links aren't checked at all.
-- Console Error: counts every `console.error`/uncaught-exception message — doesn't distinguish an
-  app's own intentional error logging (rare, but possible) from a genuine bug. No allowlist
-  mechanism exists to suppress known-benign messages.
-- Missing Image / Broken Resource: classified by file extension only (a fixed regex of common
-  image extensions) — a mistyped or extensionless image URL would be miscategorized as "Broken
-  Resource" rather than "Missing Image". Cosmetic (both still produce a real finding), not a
-  correctness issue.
+- Same-origin links only — see the Discovery Engine README's matching note. Cross-origin broken
+  links aren't checked at all.
 - No interaction-based checks (forms, buttons, search, pagination, filters, auth flows,
   upload/download, validation/success/error messages) — see above.

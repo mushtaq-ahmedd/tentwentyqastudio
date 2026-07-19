@@ -9,12 +9,13 @@ export const VALIDATION_TYPES = [
   "Content Validation",
   "Grammar Validation",
   "Functional Validation",
+  "Browser Validation",
 ] as const;
 
 export type ValidationType = (typeof VALIDATION_TYPES)[number];
 
 /**
- * All 15 engines per docs/03's Engine Categories table — matches the Prisma `EngineName` enum
+ * All 16 engines per docs/03's Engine Categories table — matches the Prisma `EngineName` enum
  * 1:1 so API responses map cleanly. Note "Grammar Validation" is deliberately absent here: per
  * docs/04, grammar checking is the Content Engine's second mode, not a separate engine — it's
  * only a ValidationType (above), attributed to the CONTENT engine when it produces findings.
@@ -28,6 +29,7 @@ export const ENGINES = [
   "Visual",
   "Content",
   "Functional",
+  "Browser Validation",
   "Accessibility",
   "Performance",
   "Security",
@@ -39,14 +41,22 @@ export const ENGINES = [
 
 export type EngineName = (typeof ENGINES)[number];
 
-/** Engines actually active in V1 (per CLAUDE.md's Scope Fence) — the rest exist in the type for
- * forward-compatibility but won't appear in real Engine Health/Results data yet. */
+/** Engines actually active in V1 (per CLAUDE.md's Scope Fence) — every real, built V1 engine, so
+ * the Dashboard's Engine Health widget reflects what's actually running. Accessibility/
+ * Performance/Security stay out until V2/V3. "Evidence" was never a real standalone engine (its
+ * responsibilities live inside each Validation engine's own collectEvidence()). */
 export const V1_ENGINES: EngineName[] = [
   "Discovery",
+  "Browser",
   "Figma",
+  "Element Matching",
   "UI Validation",
+  "Visual",
   "Content",
   "Functional",
+  "Browser Validation",
+  "Confidence",
+  "AI",
   "Report Generation",
 ];
 

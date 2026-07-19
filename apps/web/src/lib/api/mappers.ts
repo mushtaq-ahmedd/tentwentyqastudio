@@ -86,6 +86,7 @@ const VALIDATION_TYPE: Record<string, ValidationType> = {
   CONTENT_VALIDATION: "Content Validation",
   GRAMMAR_VALIDATION: "Grammar Validation",
   FUNCTIONAL_VALIDATION: "Functional Validation",
+  BROWSER_VALIDATION: "Browser Validation",
 };
 
 const ENGINE_NAME: Record<DbEngineResult["engine"], EngineName> = {
@@ -97,6 +98,7 @@ const ENGINE_NAME: Record<DbEngineResult["engine"], EngineName> = {
   VISUAL: "Visual",
   CONTENT: "Content",
   FUNCTIONAL: "Functional",
+  BROWSER_VALIDATION: "Browser Validation",
   ACCESSIBILITY: "Accessibility",
   PERFORMANCE: "Performance",
   SECURITY: "Security",

@@ -213,6 +213,22 @@
 > both expected/actual text quoted) and "Missing Expected Content" (nothing on the page came
 > close) — with the exact-match row correctly producing zero findings, confirming matching content
 > is never treated as evidence of a problem.
+>
+> **Browser Validation** (`browser-validation-engine`) is a new engine split out of the Functional
+> Engine, correcting a real non-negotiable #4 violation ("one responsibility per Engine") from
+> earlier in Phase B: Functional Engine had folded in console-error/missing-image/broken-resource
+> checking because docs/03's `EngineName` enum had no dedicated slot for it — but docs/02 lists
+> "Functional Validation" (navigation/buttons/links/forms) and "Browser Validation" (console
+> errors/network errors/broken resources/missing images) as two **separate** V1 features, each
+> deserving its own engine and its own user-facing checkbox. Added a real `BROWSER_VALIDATION`
+> value to both the `EngineName` and `ValidationType` enums, gave it its own package
+> (`browser-validation-engine`) and Audit Center checkbox, and trimmed `functional-engine` (now
+> v0.3.0) down to broken-link checking only — its one genuinely implemented docs/04 check.
+> Live-verified: a real audit selecting both checkboxes against a fixture page with one broken
+> link, one console error, and one missing image produced exactly 1 "Broken Link" finding
+> attributed to `FUNCTIONAL` and exactly 2 findings ("Console Error", "Missing Image") attributed
+> to `BROWSER_VALIDATION` — confirming the two engines run and report completely independently,
+> not just that the code compiles.
 
 ## Architecture Philosophy
 

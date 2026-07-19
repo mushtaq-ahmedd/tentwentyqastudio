@@ -15,6 +15,7 @@ const VALIDATION_TYPE_TO_DB: Record<ValidationType, string> = {
   "Content Validation": "CONTENT_VALIDATION",
   "Grammar Validation": "GRAMMAR_VALIDATION",
   "Functional Validation": "FUNCTIONAL_VALIDATION",
+  "Browser Validation": "BROWSER_VALIDATION",
 };
 
 /** Which Engine (docs/04) actually executes each user-facing ValidationType (docs/09). Grammar
@@ -25,6 +26,7 @@ const VALIDATION_TYPE_TO_ENGINE: Record<ValidationType, string> = {
   "Content Validation": "CONTENT",
   "Grammar Validation": "CONTENT",
   "Functional Validation": "FUNCTIONAL",
+  "Browser Validation": "BROWSER_VALIDATION",
 };
 
 const AUDIT_INCLUDE = {

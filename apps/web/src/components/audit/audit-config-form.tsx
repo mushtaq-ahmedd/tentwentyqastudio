@@ -18,7 +18,8 @@ const VALIDATION_DESCRIPTIONS: Record<ValidationType, string> = {
   "Figma Comparison": "Compares live pages against the connected Figma design (connect a file first in this project's Settings tab).",
   "Content Validation": "Compares page content against an uploaded Content Sheet (Knowledge tab → Add Knowledge Source → Content Sheets). Falls back to grammar/placeholder-text checks only if no Content Sheet exists.",
   "Grammar Validation": "Checks website content for placeholder text, empty headings, and missing page titles.",
-  "Functional Validation": "Checks for broken links, broken images/resources, and browser console errors on every page.",
+  "Functional Validation": "Checks every link on every page and reports any that are broken (unreachable or return an error).",
+  "Browser Validation": "Checks for browser console errors and broken page resources (missing images, failed scripts/stylesheets/API calls) on every page.",
 };
 
 // Deliberately empty — nothing is pre-selected. Every test that runs should be a choice the user
