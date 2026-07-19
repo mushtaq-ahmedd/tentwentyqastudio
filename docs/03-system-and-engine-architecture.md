@@ -1,5 +1,19 @@
 # 03 — System & Engine Architecture
 
+> **Implementation status (Phase B, first slice):** `packages/core` implements the Orchestrator
+> and standard Engine interface described below exactly as written. Two interim simplifications,
+> flagged per docs/10's discipline rather than silently deviating:
+> - **No BullMQ/Redis yet** — the Orchestrator runs engines in-process, synchronously within the
+>   `startAudit` Server Action, not as queued background jobs. Fine for a single Discovery crawl;
+>   revisit once Browser-driven engines make a single request-lifetime execution impractical.
+> - **Engine Registry is in-memory, single-process** (`packages/core/src/registry.ts`) — correct
+>   for one Next.js process, but a real multi-worker deployment needs a shared registry instead.
+>
+> Only the **Discovery Engine** (`packages/engines/discovery-engine`) exists so far. Every other
+> Engine's `EngineResult` row is created at audit-start and stays `WAITING` — the Orchestrator
+> deliberately leaves the audit honestly `RUNNING` rather than faking a `COMPLETED` pipeline that
+> didn't actually validate anything.
+
 ## Architecture Philosophy
 
 tentwenty QA Studio is **not** a monolith. It is a collection of independent Engines coordinated by a single

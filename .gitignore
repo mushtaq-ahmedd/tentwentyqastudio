@@ -36,3 +36,6 @@ pnpm-debug.log*
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 .agents/
+
+# Playwright MCP session artifacts (snapshots/console logs from interactive testing)
+.playwright-mcp/

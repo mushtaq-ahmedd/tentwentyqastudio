@@ -1,4 +1,9 @@
 import { prisma } from "@tentwenty/db";
+import { runAudit as runAuditOrchestrator } from "@tentwenty/core";
+// instrumentation.ts's register() runs in a separate module graph than Server Actions in
+// Turbopack dev mode — the Engine Registry singleton it populates isn't visible here. Importing
+// directly guarantees this specific bundle has engines registered before runAudit() is called.
+import "@/lib/engines/register";
 import type { ApiResponse, Audit, ValidationType } from "@/lib/types";
 import { requireNotViewer, requireUser } from "@/lib/auth/session";
 import { fail, guarded, ok } from "./client";
@@ -62,9 +67,11 @@ export async function fetchActiveAudit(): Promise<ApiResponse<Audit | null>> {
 }
 
 /**
- * Creates a real, honest QUEUED audit — no Engine Orchestrator exists yet (docs/03, Phase B+
- * of the backend plan), so this does not simulate progress the way the old mock layer did.
- * Every selected validation type's underlying engine (docs/04) starts in WAITING status.
+ * Creates the audit, then runs the Orchestrator (docs/03) in-process before returning — see
+ * packages/core/src/orchestrator.ts for why this is synchronous rather than a queued
+ * background job for now. Only Discovery is actually implemented as of this pass; every other
+ * selected validation type's engine stays WAITING, and the Orchestrator leaves the audit
+ * honestly RUNNING (not a faked COMPLETED) until those engines exist.
  */
 export async function startAudit(input: {
   projectId: string;
@@ -81,7 +88,7 @@ export async function startAudit(input: {
       new Set(input.validationTypes.map((v) => VALIDATION_TYPE_TO_ENGINE[v]))
     );
 
-    const audit = await prisma.audit.create({
+    const created = await prisma.audit.create({
       data: {
         projectId: input.projectId,
         environmentId: input.environmentId,
@@ -97,10 +104,12 @@ export async function startAudit(input: {
           ],
         },
       },
-      include: AUDIT_INCLUDE,
     });
 
-    return ok(toAudit(audit as AuditWithRelations), "Audit queued.");
+    await runAuditOrchestrator(created.id);
+
+    const audit = await prisma.audit.findUniqueOrThrow({ where: { id: created.id }, include: AUDIT_INCLUDE });
+    return ok(toAudit(audit as AuditWithRelations), "Audit started.");
   });
 }
 
