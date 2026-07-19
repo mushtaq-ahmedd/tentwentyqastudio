@@ -9,6 +9,8 @@ import {
   type EngineEvidence,
   type EngineFinding,
 } from "@tentwenty/core";
+import { checkGrammar } from "./grammar";
+import { computeReadability } from "./readability";
 
 /**
  * docs/04 Content Engine, two modes:
@@ -36,6 +38,13 @@ const PLACEHOLDER_PATTERNS: { label: string; pattern: RegExp }[] = [
   { label: "placeholder marker", pattern: /\[(placeholder|insert .*?here|your .*? here)\]/i },
   { label: "sample text marker", pattern: /\b(sample text|dummy text|test content|xxxx+)\b/i },
 ];
+/** Below this, a page's flowing text is too sparse for a Flesch score to mean anything (a nav-only
+ * or mostly-image page shouldn't get a "hard to read" finding off a handful of words). */
+const MIN_WORDS_FOR_READABILITY = 50;
+/** Flesch Reading Ease's own "Very Difficult" boundary (Flesch, 1948) — flagging only below this,
+ * not at "Difficult", keeps this finding rare/trusted rather than routine noise on any page with
+ * a few long sentences (docs non-negotiable #3: fewer, trusted findings over noisy ones). */
+const READABILITY_SCORE_CUTOFF = 30;
 
 type ContentMatch = { label: string; snippet: string };
 
@@ -70,6 +79,19 @@ function findEmptyHeadings($: cheerio.CheerioAPI): string[] {
     }
   });
   return empty;
+}
+
+/** Restricted to elements that actually carry prose (paragraphs, list items, table cells, quotes)
+ * rather than every leaf text node on the page — nav links, buttons, and short UI labels aren't
+ * sentences, and running a grammar/readability check over them produces mostly noise (fragments
+ * read as "bad grammar" to a rule-based checker even when they're perfectly normal UI copy). */
+function extractFlowingText($: cheerio.CheerioAPI): string {
+  const parts: string[] = [];
+  $("p, li, blockquote, td, dd").each((_, el) => {
+    const text = $(el).text().trim().replace(/\s+/g, " ");
+    if (text.length >= 20) parts.push(text);
+  });
+  return parts.join(" ");
 }
 
 function findingBase(context: EngineContext): Pick<EngineFinding, "pageUrl" | "engine"> {
@@ -125,9 +147,9 @@ function runContentSheetChecks(context: EngineContext, domElements: { text: stri
 export const contentEngine: Engine = {
   id: "content-engine",
   name: "CONTENT",
-  version: "0.2.0",
+  version: "0.3.0",
   description:
-    "Deterministic content checks: placeholder text/empty headings/missing page title (Mode 2, always on), plus Content Sheet -> Website comparison when a parsed Content Sheet is available (Mode 1, docs/04).",
+    "Deterministic content checks: placeholder text/empty headings/missing page title/grammar-spelling (LanguageTool)/Flesch readability (Mode 2, always on), plus Content Sheet -> Website comparison when a parsed Content Sheet is available (Mode 1, docs/04).",
   dependencies: ["browser-engine"],
   supportedValidationTypes: ["CONTENT_VALIDATION", "GRAMMAR_VALIDATION"],
   scope: "page",
@@ -191,6 +213,46 @@ export const contentEngine: Engine = {
         actualResult: "No page title text found.",
         businessImpact: "Missing titles hurt SEO ranking and show a blank/URL-only label in browser tabs and search results.",
         suggestedResolution: "Add a concise, descriptive <title> element for this page.",
+        evidence: [],
+      });
+    }
+
+    const flowingText = extractFlowingText($);
+
+    const grammarIssues = await checkGrammar(flowingText);
+    if (grammarIssues.length > 0) {
+      const examples = grammarIssues
+        .slice(0, 5)
+        .map((i) => `"${i.snippet}" — ${i.shortMessage}${i.replacements.length > 0 ? ` (suggest: ${i.replacements.join(", ")})` : ""}`)
+        .join("; ");
+      findings.push({
+        ...findingBase(context),
+        severity: "MEDIUM",
+        confidence: 0.85,
+        category: "Grammar/Spelling Issues",
+        title: `${grammarIssues.length} grammar/spelling issue${grammarIssues.length > 1 ? "s" : ""} found`,
+        description: `Found ${grammarIssues.length} grammar/spelling issue(s) in this page's content: ${examples}.`,
+        expectedResult: "Page content is free of grammar and spelling errors.",
+        actualResult: `${grammarIssues.length} issue(s) detected: ${examples}.`,
+        businessImpact: "Grammar and spelling mistakes in published content look unprofessional and undermine trust with real users.",
+        suggestedResolution: "Review and correct the flagged text using the suggested replacements where applicable.",
+        evidence: [],
+      });
+    }
+
+    const readability = computeReadability(flowingText);
+    if (readability && readability.wordCount >= MIN_WORDS_FOR_READABILITY && readability.score < READABILITY_SCORE_CUTOFF) {
+      findings.push({
+        ...findingBase(context),
+        severity: "LOW",
+        confidence: 0.85,
+        category: "Low Readability Score",
+        title: `Page content scores as "${readability.grade}" to read (Flesch score ${readability.score})`,
+        description: `This page's flowing text (${readability.wordCount} words across ${readability.sentenceCount} sentences) scores ${readability.score}/100 on the Flesch Reading Ease scale, graded "${readability.grade}".`,
+        expectedResult: "Page content is reasonably easy to read for a general audience (Flesch score 60+).",
+        actualResult: `Flesch Reading Ease score: ${readability.score} ("${readability.grade}").`,
+        businessImpact: "Dense, hard-to-read content increases bounce rate and reduces comprehension for the average visitor.",
+        suggestedResolution: "Shorten sentences and prefer simpler, shorter words where possible to improve readability.",
         evidence: [],
       });
     }

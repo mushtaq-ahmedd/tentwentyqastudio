@@ -280,6 +280,36 @@
 > `(623,313) 194x74px`, closely matching the button's actual on-screen position and size, with
 > 99.6% overall SSIM (the change is a tiny fraction of the page) but still correctly flagged via
 > region detection at 1.2% raw pixel difference.
+>
+> **The Content Engine's "Grammar Validation" now performs real grammar/spelling/readability
+> checking**, closing a gap where it only ever checked placeholder text, empty headings, and
+> missing page titles — genuinely unrelated to grammar despite the name. `grammar.ts` calls the
+> public LanguageTool API (https://languagetool.org/, a real rule-based grammar/spell checker, not
+> an LLM — each issue is a specific matched rule such as TYPOS/GRAMMAR/CONFUSED_WORDS, which is
+> what keeps this "deterministic validation before AI," not a judgement call) rather than
+> self-hosting a LanguageTool server, since that needs a Java runtime/Docker container unavailable
+> in this environment — the same constraint that led to WASM OpenCV elsewhere in this doc. The
+> public API is rate-limited and best-effort: a network failure or non-200 response is caught,
+> logged, and treated as zero issues rather than failing the engine (docs/04 non-negotiable #7),
+> the same failure-handling philosophy docs/06 requires for AI providers. `readability.ts`
+> computes Flesch Reading Ease (Flesch, 1948) — a pure deterministic formula from sentence/word/
+> syllable counts, no network dependency, so it always runs even when LanguageTool doesn't. Both
+> checks run only over "flowing text" (`<p>`, `<li>`, `<blockquote>`, `<td>`, `<dd>` content, min
+> 20 characters per block) rather than every leaf text node on the page — nav links, buttons, and
+> short UI labels aren't sentences, and running a grammar/readability check over them produces
+> mostly noise (a rule-based checker reads a UI fragment as a bad sentence even when it's normal
+> copy), which would hurt precision (non-negotiable #3: fewer, trusted findings over noisy ones).
+> The readability finding only fires below Flesch's own "Very Difficult" cutoff (30) and only once
+> a page has at least 50 words of flowing text, keeping it rare rather than routine. **Live-
+> verified** two ways: (1) `grammar.verify.ts` and `readability.verify.ts`, manual fixture scripts
+> hitting the real public API and the real formula respectively (no mocking) — confirming a
+> known-bad sentence ("This are a test...") is flagged with a correct suggested fix ("these"),
+> a well-formed sentence produces zero issues, dense/jargon-heavy prose scores meaningfully lower
+> than simple prose, and empty text short-circuits safely; (2) a real audit through the full
+> pipeline and BullMQ worker against a live fixture page with deliberately broken grammar produced
+> a "Grammar/Spelling Issues" finding (confidence 0.87) listing 8 real issues with correct
+> suggested corrections ("These", "is", "don't", "delivered", "the"), and the audit reached
+> `COMPLETED` normally.
 
 ## Architecture Philosophy
 
