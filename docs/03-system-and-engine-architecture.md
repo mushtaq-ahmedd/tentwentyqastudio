@@ -346,6 +346,40 @@
 > a wrong password produced a real "Test Flow Failed" finding (confidence 0.95, severity HIGH)
 > correctly attributing the failure to step 4 ("Assert URL contains "/dashboard"") with the actual
 > observed URL, a real uploaded failure screenshot, and both audits reached `COMPLETED` normally.
+>
+> **Two real bugs found and fixed via a live audit against a real 20-page site**
+> (tct.1020dev.com), reported as "audit stuck in progress, engines waiting, nothing happened":
+> (1) the audit wasn't actually stuck — a real 20-page site takes several minutes end-to-end under
+> the current sequential per-page pipeline, which can look stalled if watched only briefly (a
+> separate, known limitation — non-negotiable #10 calls for parallel page execution, not yet
+> built); but investigating surfaced (2) the Visual Engine's `computeSsim()` was silently crashing
+> on **every single real page** with a raw WASM abort (a bare number, not a JS `Error` — e.g. the
+> literal value `946174616`), because it held ~15 float32 Mats alive simultaneously at native
+> resolution — fine for every synthetic test fixture (120x120) used during development, but a real
+> full-page screenshot (1440x8808, live-observed) needs 750MB+ of simultaneous WASM heap that way.
+> Fixed by downscaling both images (capping the longer dimension to 2000px, `cv.INTER_AREA`)
+> before running the SSIM pipeline, then scaling detected regions' bounding boxes back up to the
+> original screenshot's pixel space so reported coordinates still correctly locate the change on
+> the real evidence image; `ssim.verify.ts` gained a permanent large-image (1440x8800) regression
+> case so this can't silently recur. (3) Separately, the Confidence Engine's `dependencies` array
+> (`["content-engine", "functional-engine", "ui-validation-engine"]`) was stale — visual-engine,
+> browser-validation-engine, and workflow-engine were all added after it and never added as
+> dependencies, so the topological sort in `registry.ts`'s `resolveExecutionOrder()` (which only
+> orders by declared `dependencies`, not by "does this engine write findings") had no reason to run
+> Confidence after them; live-observed on the same real audit, Visual was still `RUNNING` while
+> Confidence had already completed, meaning Visual/Browser Validation/Workflow findings silently
+> skipped the confidence-blending step entirely. Fixed by adding all three to Confidence's
+> dependency list. **Live re-verified** against the same real site after both fixes: Visual
+> completed with `error_count: 0` across all 20 pages (previously crashed on every one), correctly
+> ran before Confidence (confirmed via `engine_results` mid-run: Visual `RUNNING` while Confidence
+> still `WAITING`), and a real Visual finding's persisted confidence was `0.8` — the blended score
+> (raw 0.75 + Confidence Engine's bonuses), not the engine's own raw, unblended value — proving the
+> blend now actually applies. **Separately flagged, not yet fixed**: the same real audit run
+> revealed the Report Engine can fail to upload its PDF ("the object exceeded the maximum allowed
+> size") when many high-resolution full-page screenshots are embedded inline as base64 for a
+> larger audit — a real gap (report generation silently produces no PDF for bigger audits), but a
+> proper fix needs an image-compression step before embedding, which wasn't in scope for this
+> investigation.
 
 ## Architecture Philosophy
 

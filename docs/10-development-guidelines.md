@@ -106,6 +106,13 @@ Before approving any PR, confirm:
 - Provide a committed `.env.example` with all required keys, no real values.
 - Never log secrets — this is enforced in `05-database-and-api.md`'s logging rule and applies
   identically to local dev logs.
+- **Running locally**: `pnpm dev` (root) starts both the Next.js web app and the BullMQ audit
+  worker together (via `concurrently`), labeled `web`/`worker` in the combined log output. Audits
+  run as background jobs (docs/03/docs/08) — if only the web app is running (e.g. `pnpm --filter
+  web dev` directly, or an editor task that doesn't use the root script), a started audit will sit
+  at `RUNNING` with every engine stuck `WAITING` forever, since nothing is consuming the queue.
+  Use `pnpm dev:web` / `pnpm dev:worker` only when you deliberately want to run just one (e.g.
+  restarting the worker alone after an engine code change, without restarting the web server).
 
 ## Documentation Discipline
 

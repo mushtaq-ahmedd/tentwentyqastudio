@@ -17,7 +17,20 @@ export const confidenceEngine: Engine = {
     "Blends each Validation engine's own initial confidence score into a final one, using signals no single engine can see on its own — evidence completeness and cross-audit recurrence (docs/03 Confidence Model).",
   // Every current engine that actually writes Findings — Processing-category engines that don't
   // (Discovery/Browser/Figma/Element Matching) aren't listed; there's nothing of theirs to blend.
-  dependencies: ["content-engine", "functional-engine", "ui-validation-engine"],
+  // This list was left stale when visual-engine, browser-validation-engine, and workflow-engine
+  // were added later — without an explicit dependency edge, the topological sort in
+  // registry.ts's resolveExecutionOrder() had no reason to run Confidence after them (it only
+  // orders by declared `dependencies`, not by "writes findings"), so Confidence was completing
+  // before Visual even started, silently skipping the blend step for Visual/Browser
+  // Validation/Workflow findings entirely (live-observed on a real audit).
+  dependencies: [
+    "content-engine",
+    "functional-engine",
+    "ui-validation-engine",
+    "visual-engine",
+    "browser-validation-engine",
+    "workflow-engine",
+  ],
   supportedValidationTypes: [],
   scope: "audit",
 

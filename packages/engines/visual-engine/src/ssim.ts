@@ -32,6 +32,17 @@ const GAUSSIAN_SIGMA = 1.5;
 const REGION_DISSIMILARITY_CUTOFF = 0.3;
 /** Filters single-pixel/anti-aliasing-speck contours out of the reported region list. */
 const MIN_REGION_AREA_PX = 150;
+/** Real full-page screenshots of long marketing/content pages can be 8000+ px tall. This
+ * pipeline holds ~15 float32 Mats alive at once (see `track()` below) — at native resolution, a
+ * single large real page (observed: 1440x8808, live-verified crash) needs 750MB+ of simultaneous
+ * WASM heap, which aborts the WASM runtime with a raw memory-address "error" (a bare number, not
+ * a JS Error — this is what made it hard to diagnose). Every synthetic test fixture used during
+ * development was small (120x120), so this never surfaced until a real audit ran against a real,
+ * long page. Capping the longer dimension keeps peak memory bounded regardless of input size;
+ * region coordinates are scaled back up to the original screenshot's pixel space before being
+ * returned, so reported bounding boxes still locate the change correctly on the real evidence
+ * image. */
+const MAX_DIMENSION = 2000;
 
 export type ChangedRegion = { x: number; y: number; width: number; height: number };
 
@@ -54,8 +65,22 @@ export async function computeSsim(current: RawImage, previous: RawImage): Promis
   };
 
   try {
-    const currentMat = track(cv.matFromImageData({ data: current.data, width: current.width, height: current.height }));
-    const previousMat = track(cv.matFromImageData({ data: previous.data, width: previous.width, height: previous.height }));
+    const rawCurrentMat = track(cv.matFromImageData({ data: current.data, width: current.width, height: current.height }));
+    const rawPreviousMat = track(cv.matFromImageData({ data: previous.data, width: previous.width, height: previous.height }));
+
+    const longerSide = Math.max(current.width, current.height);
+    const scale = longerSide > MAX_DIMENSION ? MAX_DIMENSION / longerSide : 1;
+    let currentMat = rawCurrentMat;
+    let previousMat = rawPreviousMat;
+    if (scale < 1) {
+      const dsize = new cv.Size(Math.round(current.width * scale), Math.round(current.height * scale));
+      const resizedCurrent = track(new cv.Mat());
+      const resizedPrevious = track(new cv.Mat());
+      cv.resize(rawCurrentMat, resizedCurrent, dsize, 0, 0, cv.INTER_AREA);
+      cv.resize(rawPreviousMat, resizedPrevious, dsize, 0, 0, cv.INTER_AREA);
+      currentMat = resizedCurrent;
+      previousMat = resizedPrevious;
+    }
 
     const grayCurrent = track(new cv.Mat());
     const grayPrevious = track(new cv.Mat());
@@ -126,12 +151,20 @@ export async function computeSsim(current: RawImage, previous: RawImage): Promis
     const hierarchy = track(new cv.Mat());
     cv.findContours(binary, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
+    // Contours were found in (possibly downscaled) working-resolution space — scale bounding
+    // boxes back up to the original screenshot's pixel space so reported regions still correctly
+    // locate the change on the real, full-resolution evidence image.
     const changedRegions: ChangedRegion[] = [];
     for (let i = 0; i < contours.size(); i++) {
       const contour = contours.get(i);
       const rect = cv.boundingRect(contour);
       if (rect.width * rect.height >= MIN_REGION_AREA_PX) {
-        changedRegions.push({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+        changedRegions.push({
+          x: Math.round(rect.x / scale),
+          y: Math.round(rect.y / scale),
+          width: Math.round(rect.width / scale),
+          height: Math.round(rect.height / scale),
+        });
       }
       contour.delete();
     }

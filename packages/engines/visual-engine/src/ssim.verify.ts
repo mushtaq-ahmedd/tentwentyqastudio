@@ -94,6 +94,61 @@ async function main() {
     check("detected region roughly overlaps the actual changed block (40,40)-(70,70)", overlapsExpectedArea, `region=(${r.x},${r.y},${r.width}x${r.height})`);
   }
 
+  // Regression test for a real crash: a genuine full-page screenshot (1440x8808, live-verified
+  // against a real site) aborted the WASM runtime with a raw memory-address "error" — ~15 float32
+  // Mats held simultaneously at native resolution needed 750MB+ of WASM heap. Every fixture above
+  // is small (120x120) and never exercised this; this case deliberately uses a large image to
+  // guard against the same regression recurring.
+  const LARGE_WIDTH = 1440;
+  const LARGE_HEIGHT = 8800;
+  function largeImage(changedBlock?: { x: number; y: number; w: number; h: number }) {
+    const png = new PNG({ width: LARGE_WIDTH, height: LARGE_HEIGHT });
+    for (let i = 0; i < png.data.length; i += 4) {
+      png.data[i] = 120;
+      png.data[i + 1] = 130;
+      png.data[i + 2] = 200;
+      png.data[i + 3] = 255;
+    }
+    if (changedBlock) {
+      for (let y = changedBlock.y; y < changedBlock.y + changedBlock.h; y++) {
+        for (let x = changedBlock.x; x < changedBlock.x + changedBlock.w; x++) {
+          const idx = (LARGE_WIDTH * y + x) << 2;
+          png.data[idx] = 220;
+          png.data[idx + 1] = 40;
+          png.data[idx + 2] = 40;
+          png.data[idx + 3] = 255;
+        }
+      }
+    }
+    return { data: png.data, width: LARGE_WIDTH, height: LARGE_HEIGHT };
+  }
+
+  const largeBase = largeImage();
+  const largeChangedBlock = { x: 600, y: 8000, w: 200, h: 80 };
+  const largeChanged = largeImage(largeChangedBlock);
+  let largeResult: Awaited<ReturnType<typeof computeSsim>> | null = null;
+  let largeCrashed: unknown = null;
+  try {
+    largeResult = await computeSsim(largeBase, largeChanged);
+  } catch (err) {
+    largeCrashed = err;
+  }
+  check("a large (1440x8800) real-page-sized image does not crash the WASM runtime", largeCrashed === null, `crashed=${JSON.stringify(largeCrashed)}`);
+  if (largeResult) {
+    check("large image: genuine change is detected as a region", largeResult.changedRegions.length >= 1, `regions=${largeResult.changedRegions.length}`);
+    if (largeResult.changedRegions.length >= 1) {
+      const r = largeResult.changedRegions[0];
+      const expected = largeChangedBlock;
+      const overlaps =
+        r.x < expected.x + expected.w && r.x + r.width > expected.x && r.y < expected.y + expected.h && r.y + r.height > expected.y;
+      check(
+        "large image: detected region's scaled-back-up coordinates overlap the actual changed block",
+        overlaps,
+        `region=(${r.x},${r.y},${r.width}x${r.height}) expected=(${expected.x},${expected.y},${expected.w}x${expected.h})`
+      );
+    }
+  }
+
   if (failures > 0) {
     console.error(`\n${failures} check(s) FAILED`);
     process.exit(1);
