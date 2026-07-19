@@ -6,3 +6,4 @@
 import "@tentwenty/discovery-engine";
 import "@tentwenty/browser-engine";
 import "@tentwenty/content-engine";
+import "@tentwenty/functional-engine";

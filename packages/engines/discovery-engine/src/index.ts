@@ -1,7 +1,9 @@
 import * as cheerio from "cheerio";
 import {
   registerEngine,
+  uploadEvidence,
   TransientEngineError,
+  type BrokenLink,
   type DiscoveredPage,
   type Engine,
   type EngineContext,
@@ -45,11 +47,45 @@ async function fetchWithTimeout(url: string): Promise<Response> {
   }
 }
 
-async function crawl(baseUrl: string): Promise<DiscoveredPage[]> {
+async function recordBrokenLink(
+  auditId: string,
+  brokenLinks: BrokenLink[],
+  sourcePage: string,
+  brokenHref: string,
+  reason: string
+): Promise<void> {
+  const evidenceText = [
+    "Broken link check",
+    `Source page: ${sourcePage}`,
+    `Target URL: ${brokenHref}`,
+    `Result: ${reason}`,
+    `Checked at: ${new Date().toISOString()}`,
+  ].join("\n");
+  // No real Page row exists yet at this point in the pipeline (Discovery runs before pages are
+  // persisted) — "discovery" is a shared namespace, not a pageId; the Functional Engine's
+  // finding gets the real pageId once it looks the page up by URL.
+  const evidencePath = await uploadEvidence(
+    auditId,
+    "discovery",
+    `broken-link-${brokenLinks.length}`,
+    evidenceText,
+    "text/plain"
+  );
+  brokenLinks.push({ pageUrl: sourcePage, brokenHref, reason, evidencePath });
+}
+
+async function crawl(
+  baseUrl: string,
+  auditId: string
+): Promise<{ pages: DiscoveredPage[]; brokenLinks: BrokenLink[] }> {
   const origin = new URL(baseUrl).origin;
   const visited = new Set<string>();
   const queue: string[] = [normalizeUrl(baseUrl)];
   const pages: DiscoveredPage[] = [];
+  const brokenLinks: BrokenLink[] = [];
+  // First-seen source page for each discovered URL — needed to attribute a broken link back to
+  // the page that links to it, since the queue itself is just a flat list of URLs.
+  const linkSource = new Map<string, string>();
 
   while (queue.length > 0 && pages.length < MAX_PAGES) {
     const current = queue.shift();
@@ -59,9 +95,19 @@ async function crawl(baseUrl: string): Promise<DiscoveredPage[]> {
     let html: string;
     try {
       const res = await fetchWithTimeout(current);
-      if (!res.ok) continue; // a broken link shouldn't fail the whole crawl
+      if (!res.ok) {
+        const source = linkSource.get(current);
+        if (source) {
+          await recordBrokenLink(auditId, brokenLinks, source, current, `HTTP ${res.status} ${res.statusText}`.trim());
+        }
+        continue; // a broken link shouldn't fail the whole crawl
+      }
       html = await res.text();
-    } catch {
+    } catch (err) {
+      const source = linkSource.get(current);
+      if (source) {
+        await recordBrokenLink(auditId, brokenLinks, source, current, `Unreachable: ${(err as Error).message}`);
+      }
       continue; // one unreachable page shouldn't abort discovery of the rest
     }
 
@@ -74,6 +120,7 @@ async function crawl(baseUrl: string): Promise<DiscoveredPage[]> {
       if (!href || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("#")) return;
       try {
         const resolved = normalizeUrl(new URL(href, current).toString());
+        if (!linkSource.has(resolved)) linkSource.set(resolved, current);
         if (
           new URL(resolved).origin === origin &&
           !NON_PAGE_EXTENSIONS.test(new URL(resolved).pathname) &&
@@ -88,7 +135,7 @@ async function crawl(baseUrl: string): Promise<DiscoveredPage[]> {
     });
   }
 
-  return pages;
+  return { pages, brokenLinks };
 }
 
 export const discoveryEngine: Engine = {
@@ -105,7 +152,9 @@ export const discoveryEngine: Engine = {
     const baseUrl = context.environment.url.startsWith("http")
       ? context.environment.url
       : `https://${context.environment.url}`;
-    context.sharedResources.pages = await crawl(baseUrl);
+    const { pages, brokenLinks } = await crawl(baseUrl, context.auditId);
+    context.sharedResources.pages = pages;
+    context.sharedResources.brokenLinks = brokenLinks;
   },
 
   async validate() {

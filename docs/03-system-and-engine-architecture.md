@@ -20,14 +20,18 @@
 > - **Pages execute sequentially within a page-scoped engine, not in parallel** — same in-process
 >   constraint as above; real per-page parallelism needs the job queue.
 >
-> Engines that exist so far: **Discovery** (`discovery-engine`, audit-scoped, real crawl),
-> **Browser** (`browser-engine`, page-scoped, real Playwright — screenshot/DOM/console/network,
-> uploaded to Supabase Storage), **Content** (`content-engine`, page-scoped, Mode 2 only —
-> deterministic placeholder/empty-heading/missing-title checks against the Browser Engine's DOM
-> snapshot; verified live against lipsum.com's real Lorem Ipsum content). Every other Engine's
-> `EngineResult` row is created at audit-start and stays `WAITING` — the Orchestrator deliberately
-> leaves the audit honestly `RUNNING` rather than faking a `COMPLETED` pipeline that didn't
-> actually validate anything.
+> Engines that exist so far: **Discovery** (`discovery-engine`, audit-scoped, real crawl — also
+> records same-origin broken links it observes as a side effect of crawling, into
+> `sharedResources.brokenLinks`, with evidence text already uploaded), **Browser**
+> (`browser-engine`, page-scoped, real Playwright — screenshot/DOM/console/network, uploaded to
+> Supabase Storage), **Content** (`content-engine`, page-scoped, Mode 2 only — deterministic
+> placeholder/empty-heading/missing-title checks against the Browser Engine's DOM snapshot;
+> verified live against lipsum.com's real Lorem Ipsum content), **Functional**
+> (`functional-engine`, page-scoped, broken-link findings only — the one check in docs/04's
+> Functional Engine list achievable without actually driving the page; verified live with a real
+> 404 link against a local fixture server). Every other Engine's `EngineResult` row is created at
+> audit-start and stays `WAITING` — the Orchestrator deliberately leaves the audit honestly
+> `RUNNING` rather than faking a `COMPLETED` pipeline that didn't actually validate anything.
 
 ## Architecture Philosophy
 

@@ -28,6 +28,20 @@ export type BrowserPageArtifacts = {
 };
 
 /**
+ * One same-origin link the Discovery Engine tried to follow and couldn't — a real HTTP
+ * error/timeout observed while crawling, not a guess. Discovery only *collects* this (docs/03:
+ * Collection engines "gather data only, never judge"); the Functional Engine turns it into a
+ * Finding. `evidencePath` is already uploaded (docs/05) — a text description of the check, since
+ * Discovery runs before any Page row (and thus any real pageId) exists.
+ */
+export type BrokenLink = {
+  pageUrl: string;
+  brokenHref: string;
+  reason: string;
+  evidencePath: string;
+};
+
+/**
  * Data that Collection engines (Discovery/Browser/Figma) hand forward to later engines —
  * docs/03 "Engines must not request data directly from other Engines — only from the shared
  * input the Core Platform provides." Extended as Browser/Figma engines are built.
@@ -36,6 +50,8 @@ export type SharedResources = {
   pages?: DiscoveredPage[];
   /** Keyed by page URL — populated by the Browser Engine, read by page-scoped Validation engines. */
   pageArtifacts?: Record<string, BrowserPageArtifacts>;
+  /** Populated by the Discovery Engine while crawling — read by the Functional Engine. */
+  brokenLinks?: BrokenLink[];
   [key: string]: unknown;
 };
 
