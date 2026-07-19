@@ -1,9 +1,11 @@
 import { prisma } from "@tentwenty/db";
 import { engineRegistry } from "./registry";
+import { resolveEngineConfig } from "./engine-config";
 import { TransientEngineError, type DiscoveredPage, type Engine, type EngineContext, type EngineFinding } from "./types";
 
-/** docs/03 Retry policy: transient failures only, max 2 attempts. */
-const MAX_RETRIES = 2;
+/** docs/03 Retry policy: transient failures only. Default max attempts when no PlatformSettings
+ * row exists yet (shouldn't happen outside a fresh, unseeded database). */
+const DEFAULT_MAX_RETRIES = 2;
 
 /**
  * Runs every engine that's both (a) registered in this process and (b) has a WAITING
@@ -26,6 +28,18 @@ export async function runAudit(auditId: string): Promise<void> {
 
   await prisma.audit.update({ where: { id: auditId }, data: { status: "RUNNING" } });
 
+  const platformSettings = await prisma.platformSettings.findUnique({ where: { id: 1 } });
+  const engineConfig = resolveEngineConfig(
+    platformSettings ?? {
+      screenshotQuality: "High",
+      defaultTimeoutSeconds: 30,
+      retryCount: DEFAULT_MAX_RETRIES,
+      defaultViewport: "Desktop (1440x900)",
+    },
+    audit.project,
+    audit.environment
+  );
+
   const executionOrder = engineRegistry.resolveExecutionOrder();
   const totalForThisAudit = audit.engineResults.length;
   const runnable = executionOrder.filter((engine) =>
@@ -47,6 +61,9 @@ export async function runAudit(auditId: string): Promise<void> {
     configuration: {
       figmaFileUrl: audit.project.figmaFileUrl,
       figmaAccessToken: audit.project.figmaAccessToken,
+      // Resolved Global -> Project -> Environment validation config (docs/03 hierarchy) — engines
+      // read the already-merged result, never the individual levels themselves.
+      engineConfig,
     },
     sharedResources: {},
   };
@@ -60,13 +77,21 @@ export async function runAudit(auditId: string): Promise<void> {
     if (!engineResultRow) continue; // already handled (defensive — shouldn't happen)
 
     if (engine.scope === "audit") {
-      await runSingleEngine(engine, engineResultRow.id, context, audit.id, audit.projectId);
+      await runSingleEngine(engine, engineResultRow.id, context, audit.id, audit.projectId, engineConfig.retryCount);
     } else {
       // "page" scope — docs/03 "Each page of an audit is also an independent execution unit."
       // Sequential across pages for now, same in-process simplification already flagged above
       // for the lack of a BullMQ queue — real per-page parallelism needs that queue first.
       const pages = await prisma.page.findMany({ where: { auditId } });
-      await runPageScopedEngine(engine, engineResultRow.id, context, pages, audit.id, audit.projectId);
+      await runPageScopedEngine(
+        engine,
+        engineResultRow.id,
+        context,
+        pages,
+        audit.id,
+        audit.projectId,
+        engineConfig.retryCount
+      );
     }
 
     if (!pagesPersisted && context.sharedResources.pages?.length) {
@@ -109,10 +134,11 @@ export async function runAudit(auditId: string): Promise<void> {
 }
 
 /** Runs one engine's 5-method lifecycle once, with docs/03's retry policy (transient only, max
- * `MAX_RETRIES`). Throws the last error if every attempt fails. */
-async function runEngineOnce(engine: Engine, context: EngineContext): Promise<EngineFinding[]> {
+ * `maxRetries` — resolved per-audit from the Global/Project/Environment config hierarchy, see
+ * `engine-config.ts`). Throws the last error if every attempt fails. */
+async function runEngineOnce(engine: Engine, context: EngineContext, maxRetries: number): Promise<EngineFinding[]> {
   let lastError: unknown;
-  for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
+  for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
     try {
       await engine.initialize(context);
       let findings = await engine.validate(context);
@@ -125,8 +151,17 @@ async function runEngineOnce(engine: Engine, context: EngineContext): Promise<En
     } catch (err) {
       lastError = err;
       const isTransient = err instanceof TransientEngineError;
-      // docs/03: never retry permanent failures; retry transient ones up to MAX_RETRIES.
-      if (!isTransient || attempt > MAX_RETRIES) break;
+      console.log(
+        JSON.stringify({
+          engine: engine.name,
+          attempt,
+          maxRetries,
+          transient: isTransient,
+          error: (err as Error).message,
+        })
+      );
+      // docs/03: never retry permanent failures; retry transient ones up to maxRetries.
+      if (!isTransient || attempt > maxRetries) break;
     }
   }
   throw lastError;
@@ -137,7 +172,8 @@ async function runSingleEngine(
   engineResultId: string,
   context: EngineContext,
   auditId: string,
-  projectId: string
+  projectId: string,
+  maxRetries: number
 ): Promise<void> {
   await prisma.engineResult.update({ where: { id: engineResultId }, data: { status: "RUNNING" } });
   await prisma.audit.update({
@@ -148,7 +184,7 @@ async function runSingleEngine(
 
   const startedAt = Date.now();
   try {
-    const findings = await runEngineOnce(engine, context);
+    const findings = await runEngineOnce(engine, context, maxRetries);
     const durationSeconds = Math.round((Date.now() - startedAt) / 1000);
     await persistFindings(auditId, projectId, findings);
     await prisma.engineResult.update({
@@ -184,7 +220,8 @@ async function runPageScopedEngine(
   context: EngineContext,
   pages: { id: string; url: string; name: string }[],
   auditId: string,
-  projectId: string
+  projectId: string,
+  maxRetries: number
 ): Promise<void> {
   await prisma.engineResult.update({ where: { id: engineResultId }, data: { status: "RUNNING" } });
   await prisma.audit.update({
@@ -200,7 +237,7 @@ async function runPageScopedEngine(
   for (const page of pages) {
     context.page = { id: page.id, url: page.url, name: page.name };
     try {
-      const findings = await runEngineOnce(engine, context);
+      const findings = await runEngineOnce(engine, context, maxRetries);
       await persistFindings(auditId, projectId, findings);
       findingsCount += findings.length;
     } catch (err) {

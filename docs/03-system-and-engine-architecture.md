@@ -160,6 +160,34 @@
 > sizes and correct MIME types (the Developer PDF opened and inspected directly is a genuine
 > single-page PDF 1.4 document with correct title metadata), and the project Reports page renders
 > all 4 with working signed-URL Open/Download links.
+>
+> **Configuration Hierarchy** (Global -> Project -> Environment) is now real, not just declared.
+> Previously `PlatformSettings` held four operational fields (`screenshotQuality`,
+> `defaultTimeoutSeconds`, `retryCount`, `defaultViewport`) that nothing actually read — the
+> Browser Engine hardcoded its own 15s navigation timeout and never set a viewport, and the
+> Orchestrator's retry loop used a hardcoded `MAX_RETRIES = 2` — a real, silent gap surfaced while
+> building this. `Project` and `Environment` gained the same four fields as nullable overrides
+> (`packages/core/src/engine-config.ts`'s `resolveEngineConfig()` merges
+> `environment ?? project ?? platform` per field, exactly matching this doc's stated precedence).
+> The Orchestrator resolves this once per audit and puts it on `EngineContext.configuration
+> .engineConfig`; the Browser Engine now actually uses it for navigation timeout and viewport, and
+> the per-audit retry loop uses the resolved `retryCount` instead of a hardcoded constant.
+> `screenshotQuality` is resolved through the full hierarchy but deliberately **not** applied to
+> the canonical screenshot format — Playwright PNG screenshots have no lossy quality axis, and the
+> Visual Engine's pixelmatch/pngjs comparison hard-depends on decoding that evidence as PNG;
+> switching to JPEG for non-"High" settings would silently break cross-audit visual regression for
+> any project/environment that isn't "High" (docs/03: no Engine's config may break another
+> Engine). Flagged as a known gap rather than silently dropped. Settable today via the Add
+> Environment modal's "Validation Config Overrides" section (Environment level only) or direct SQL
+> (Project level — no UI yet, same class of gap as Platform/Project Settings' existing "real
+> backend, no save UI" issue). **Live-verified** end-to-end against a real fixture server: an
+> Environment-level override (`defaultTimeoutSeconds: 1`, `retryCount: 1`,
+> `defaultViewport: "Mobile (375x667)"`) produced a screenshot that decoded to exactly 375x667
+> pixels, and a deliberately slow page failed navigation with "Timeout 1000ms exceeded" logged on
+> exactly 2 attempts (1 + 1 retry) — both matching the override, not the Global default. A second
+> audit against an Environment with no override, on a Project with `defaultViewport: "Tablet
+> (768x1024)"` set directly in Postgres, produced a 768x1024 screenshot — confirming the
+> Environment -> Project -> Global fallback chain, not just a two-level override.
 
 ## Architecture Philosophy
 

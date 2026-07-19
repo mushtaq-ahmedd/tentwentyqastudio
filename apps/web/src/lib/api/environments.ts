@@ -12,13 +12,22 @@ export async function fetchEnvironments(projectId: string): Promise<ApiResponse<
   });
 }
 
-export async function addEnvironment(input: {
-  projectId: string;
-  name: string;
-  url: string;
-  loginUrl?: string;
-  notes?: string;
-}): Promise<ApiResponse<Environment>> {
+export type EnvironmentConfigOverrideInput = {
+  screenshotQuality?: "High" | "Medium" | null;
+  defaultTimeoutSeconds?: number | null;
+  retryCount?: number | null;
+  defaultViewport?: string | null;
+};
+
+export async function addEnvironment(
+  input: {
+    projectId: string;
+    name: string;
+    url: string;
+    loginUrl?: string;
+    notes?: string;
+  } & EnvironmentConfigOverrideInput
+): Promise<ApiResponse<Environment>> {
   return guarded(async () => {
     await requireNotViewer();
     if (!input.name.trim() || !input.url.trim()) {
@@ -31,9 +40,27 @@ export async function addEnvironment(input: {
         url: input.url,
         loginUrl: input.loginUrl,
         notes: input.notes ?? "",
+        screenshotQuality: input.screenshotQuality ?? null,
+        defaultTimeoutSeconds: input.defaultTimeoutSeconds ?? null,
+        retryCount: input.retryCount ?? null,
+        defaultViewport: input.defaultViewport ?? null,
       },
     });
     return ok(toEnvironment(env), "Environment added successfully.");
+  });
+}
+
+export async function updateEnvironmentConfig(
+  environmentId: string,
+  patch: EnvironmentConfigOverrideInput
+): Promise<ApiResponse<Environment>> {
+  return guarded(async () => {
+    await requireNotViewer();
+    const env = await prisma.environment.update({
+      where: { id: environmentId },
+      data: patch,
+    });
+    return ok(toEnvironment(env), "Environment configuration updated.");
   });
 }
 

@@ -2,15 +2,25 @@ import { chromium, type Browser } from "playwright";
 import {
   registerEngine,
   recordPageScreenshot,
+  parseViewport,
   TransientEngineError,
   uploadEvidence,
   type BrowserPageArtifacts,
   type DomElement,
   type Engine,
+  type EngineConfig,
   type EngineContext,
 } from "@tentwenty/core";
 
-const NAVIGATION_TIMEOUT_MS = 15_000;
+/** Fallback when an engine runs outside the Orchestrator's normal context-building (shouldn't
+ * happen in production — see README). Mirrors PlatformSettings' own defaults. */
+const FALLBACK_ENGINE_CONFIG: EngineConfig = {
+  screenshotQuality: "High",
+  defaultTimeoutSeconds: 15,
+  retryCount: 2,
+  defaultViewport: "Desktop (1440x900)",
+};
+
 /** Extra settle time after `load` for late console/network activity — safer than waiting for
  * `networkidle`, which never resolves on pages with long-lived connections (analytics beacons,
  * websockets). Documented tradeoff, not an oversight — see README. */
@@ -74,6 +84,11 @@ export const browserEngine: Engine = {
     const page = context.page;
     if (!page) throw new Error('Browser Engine requires context.page (scope: "page").');
 
+    const engineConfig =
+      (context.configuration.engineConfig as EngineConfig | undefined) ?? FALLBACK_ENGINE_CONFIG;
+    const navigationTimeoutMs = engineConfig.defaultTimeoutSeconds * 1000;
+    const viewport = parseViewport(engineConfig.defaultViewport);
+
     let browser: Browser;
     try {
       browser = await chromium.launch();
@@ -86,7 +101,7 @@ export const browserEngine: Engine = {
       const networkErrors: string[] = [];
       const networkLog: string[] = [];
 
-      const browserPage = await browser.newPage();
+      const browserPage = await browser.newPage({ viewport });
       browserPage.on("console", (msg) => {
         consoleMessages.push(`[${msg.type()}] ${msg.text()}`);
       });
@@ -100,13 +115,22 @@ export const browserEngine: Engine = {
       });
 
       try {
-        await browserPage.goto(page.url, { waitUntil: "load", timeout: NAVIGATION_TIMEOUT_MS });
+        await browserPage.goto(page.url, { waitUntil: "load", timeout: navigationTimeoutMs });
         await browserPage.waitForTimeout(SETTLE_MS);
       } catch (err) {
         throw new TransientEngineError(`Failed to navigate to ${page.url}: ${(err as Error).message}`);
       }
 
-      const screenshotBuffer = await browserPage.screenshot({ fullPage: true });
+      // Deliberately always PNG regardless of engineConfig.screenshotQuality: the Visual Engine's
+      // pixelmatch/pngjs comparison (packages/engines/visual-engine) hard-depends on decoding this
+      // exact evidence as PNG. Playwright's PNG screenshots have no lossy "quality" axis anyway
+      // (only `type: "jpeg"` does) — switching format based on this setting would silently break
+      // cross-audit visual regression for any project/environment that isn't "High", which is a
+      // real Engine Framework violation (docs/03: no Engine's config changes may break another
+      // Engine). screenshotQuality is still resolved through the full hierarchy above; it just has
+      // no safe lever to pull on the canonical screenshot yet — flagged in README, not silently
+      // dropped.
+      const screenshotBuffer = await browserPage.screenshot({ fullPage: true, type: "png" });
       const domHtml = await browserPage.content();
       const domElements = await browserPage.evaluate(collectDomElements, MAX_DOM_ELEMENTS);
 

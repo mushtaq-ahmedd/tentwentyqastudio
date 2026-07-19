@@ -14,18 +14,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUI } from "@/components/shell/ui-provider";
 import { addEnvironmentAction } from "@/app/actions/environments";
+
+const VIEWPORT_OPTIONS = ["Desktop (1440x900)", "Laptop (1280x800)", "Tablet (768x1024)", "Mobile (375x667)"];
 
 export function AddEnvironmentModal({ open, projectId }: { open: boolean; projectId?: string }) {
   const { closeModal } = useUI();
   const [pending, setPending] = React.useState(false);
   const [form, setForm] = React.useState({ name: "", url: "", loginUrl: "", notes: "" });
+  const [overrides, setOverrides] = React.useState({
+    screenshotQuality: "",
+    defaultTimeoutSeconds: "",
+    retryCount: "",
+    defaultViewport: "",
+  });
 
   async function handleSave() {
     if (!projectId) return;
     setPending(true);
-    const result = await addEnvironmentAction({ projectId, ...form });
+    const result = await addEnvironmentAction({
+      projectId,
+      ...form,
+      screenshotQuality: overrides.screenshotQuality ? (overrides.screenshotQuality as "High" | "Medium") : null,
+      defaultTimeoutSeconds: overrides.defaultTimeoutSeconds ? Number(overrides.defaultTimeoutSeconds) : null,
+      retryCount: overrides.retryCount ? Number(overrides.retryCount) : null,
+      defaultViewport: overrides.defaultViewport || null,
+    });
     setPending(false);
     if (!result.success) {
       toast.error(result.error.message);
@@ -84,6 +100,61 @@ export function AddEnvironmentModal({ open, projectId }: { open: boolean; projec
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
             />
+          </div>
+          <div className="flex flex-col gap-3 rounded-md border border-border-default p-3">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[13px] font-medium">Validation Config Overrides</span>
+              <span className="text-xs text-text-secondary">
+                Optional — leave blank to inherit from Project/Global defaults (docs/03 configuration hierarchy).
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label>Screenshot Quality</Label>
+                <Select
+                  value={overrides.screenshotQuality}
+                  onValueChange={(v) => setOverrides((o) => ({ ...o, screenshotQuality: v ?? "" }))}
+                >
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Inherit" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="High">High</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Viewport</Label>
+                <Select
+                  value={overrides.defaultViewport}
+                  onValueChange={(v) => setOverrides((o) => ({ ...o, defaultViewport: v ?? "" }))}
+                >
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Inherit" /></SelectTrigger>
+                  <SelectContent>
+                    {VIEWPORT_OPTIONS.map((v) => (
+                      <SelectItem key={v} value={v}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Timeout (seconds)</Label>
+                <Input
+                  type="number"
+                  placeholder="Inherit"
+                  value={overrides.defaultTimeoutSeconds}
+                  onChange={(e) => setOverrides((o) => ({ ...o, defaultTimeoutSeconds: e.target.value }))}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Retry Count</Label>
+                <Input
+                  type="number"
+                  placeholder="Inherit"
+                  value={overrides.retryCount}
+                  onChange={(e) => setOverrides((o) => ({ ...o, retryCount: e.target.value }))}
+                />
+              </div>
+            </div>
           </div>
         </DialogBody>
         <DialogFooter>

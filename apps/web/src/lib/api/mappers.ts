@@ -204,6 +204,10 @@ export function toEnvironment(e: DbEnvironment): Environment {
     status: e.online ? "online" : "offline",
     authStatus: ENV_AUTH_STATUS[e.authStatus],
     notes: e.notes,
+    screenshotQuality: (e.screenshotQuality as "High" | "Medium" | null) ?? null,
+    defaultTimeoutSeconds: e.defaultTimeoutSeconds,
+    retryCount: e.retryCount,
+    defaultViewport: e.defaultViewport,
   };
 }
 

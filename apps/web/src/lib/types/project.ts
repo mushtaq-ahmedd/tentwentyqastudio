@@ -28,6 +28,12 @@ export type Environment = {
   status: "online" | "offline";
   authStatus: EnvironmentAuthStatus;
   notes: string;
+  // Validation config overrides (docs/03 Global -> Project -> Environment hierarchy). Null means
+  // "inherit" — see packages/core/src/engine-config.ts for how these are resolved at audit time.
+  screenshotQuality: "High" | "Medium" | null;
+  defaultTimeoutSeconds: number | null;
+  retryCount: number | null;
+  defaultViewport: string | null;
 };
 
 export const KNOWLEDGE_SOURCE_TYPES = [

@@ -80,6 +80,15 @@ model Project {
   /// restorable"). Distinct from an actual delete, which is a separate, permanent action.
   archivedAt   DateTime?     @map("archived_at")
 
+  /// Validation config overrides (docs/03 "Configuration Hierarchy: Global -> Project ->
+  /// Environment"). Null means "inherit from the Global PlatformSettings row" — same vocabulary
+  /// as PlatformSettings itself, since the doc never specifies field names beyond naming the
+  /// three levels. Resolved by packages/core/src/engine-config.ts, never read directly by Engines.
+  screenshotQuality     String? @map("screenshot_quality")
+  defaultTimeoutSeconds Int?    @map("default_timeout_seconds")
+  retryCount            Int?    @map("retry_count")
+  defaultViewport       String? @map("default_viewport")
+
   environments      Environment[]
   knowledgeSources  KnowledgeSource[]
   audits            Audit[]
@@ -154,6 +163,14 @@ model Environment {
   // rest. Never logged, per docs/10/docs/11's secrets rules.
   authMethod     String? @map("auth_method")
   encryptedCreds String? @map("encrypted_creds")
+
+  /// Validation config overrides — the innermost, highest-precedence level of docs/03's Global ->
+  /// Project -> Environment hierarchy. Null means "inherit from Project (which may itself inherit
+  /// from Global)". See Project's matching fields above for the shared rationale.
+  screenshotQuality     String? @map("screenshot_quality")
+  defaultTimeoutSeconds Int?    @map("default_timeout_seconds")
+  retryCount            Int?    @map("retry_count")
+  defaultViewport       String? @map("default_viewport")
 
   audits Audit[]
 
