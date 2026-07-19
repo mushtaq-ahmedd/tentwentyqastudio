@@ -105,10 +105,14 @@ export async function fetchDashboardSummary(): Promise<ApiResponse<DashboardSumm
   return guarded(async () => {
     await requireUser();
 
-    const [projects, allAudits, criticalFindingsRaw, recentReportsRaw, confidenceAgg, recentActivity] =
+    // Everything independent of `projects` runs in one round-trip layer, including
+    // criticalFindingsCount (previously awaited separately, after withAggregates below — a third
+    // sequential layer for no reason, since it doesn't depend on anything either). Only
+    // withAggregates() has a real data dependency (needs project IDs) forcing a second layer.
+    const [projects, allAudits, criticalFindingsRaw, recentReportsRaw, confidenceAgg, recentActivity, criticalFindingsCount] =
       await Promise.all([
         prisma.project.findMany({ where: { archivedAt: null } }),
-        prisma.audit.findMany({ include: AUDIT_INCLUDE, orderBy: { startedAt: "desc" } }),
+        prisma.audit.findMany({ include: AUDIT_INCLUDE, orderBy: { startedAt: "desc" }, take: 50 }),
         prisma.finding.findMany({
           where: { severity: "CRITICAL" },
           include: { evidence: true, page: { select: { name: true } } },
@@ -122,6 +126,7 @@ export async function fetchDashboardSummary(): Promise<ApiResponse<DashboardSumm
         }),
         prisma.finding.aggregate({ _avg: { confidence: true } }),
         fetchRecentActivity(6),
+        prisma.finding.count({ where: { severity: "CRITICAL" } }),
       ]);
 
     const projectsWithAgg = await withAggregates(projects);
@@ -132,7 +137,6 @@ export async function fetchDashboardSummary(): Promise<ApiResponse<DashboardSumm
     const audits = allAudits.map((a) => toAudit(a as AuditWithRelations));
     const runningAudits = audits.filter((a) => a.status === "running");
     const completedAudits = audits.filter((a) => a.status === "completed");
-    const criticalFindingsCount = await prisma.finding.count({ where: { severity: "CRITICAL" } });
 
     const kpis: DashboardKpis = {
       totalProjects: projects.length,

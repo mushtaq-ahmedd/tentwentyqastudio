@@ -14,10 +14,12 @@ export default async function AuditCenterPage({
   const projectsRes = await projectsApi.fetchProjects();
   if (!projectsRes.success) throw new Error(projectsRes.error.message);
 
-  // Environments are project-scoped — fetch for every project so the form can react to selection.
-  const allEnvironments = (
-    await Promise.all(projectsRes.data.map((p) => environmentsApi.fetchEnvironments(p.id)))
-  ).flatMap((r) => (r.success ? r.data : []));
+  // Environments are project-scoped — fetch every project's in one query so the form can react
+  // to selection (previously one query per project: 8 projects meant 8 separate round trips).
+  const environmentsRes = await environmentsApi.fetchEnvironmentsForProjects(
+    projectsRes.data.map((p) => p.id)
+  );
+  const allEnvironments = environmentsRes.success ? environmentsRes.data : [];
 
   return (
     <>

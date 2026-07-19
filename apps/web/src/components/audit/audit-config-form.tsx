@@ -14,14 +14,18 @@ import { startAuditAction } from "@/app/actions/audits";
 import { VALIDATION_TYPES, type Environment, type Project, type ValidationType } from "@/lib/types";
 
 const VALIDATION_DESCRIPTIONS: Record<ValidationType, string> = {
-  "UI Validation": "Compares rendered pages against expected layout and design.",
-  "Figma Comparison": "Compares live pages against the connected Figma design.",
-  "Content Validation": "Checks page content against source-of-truth requirements.",
-  "Grammar Validation": "Checks website content for grammar and spelling issues.",
-  "Functional Validation": "Verifies core user flows behave as expected.",
+  "UI Validation": "Compares rendered pages against the connected Figma design (requires Figma Comparison too — see Project Settings to connect a Figma file).",
+  "Figma Comparison": "Compares live pages against the connected Figma design (connect a file first in this project's Settings tab).",
+  "Content Validation": "Compares page content against an uploaded Content Sheet (Knowledge tab → Add Knowledge Source → Content Sheets). Falls back to grammar/placeholder-text checks only if no Content Sheet exists.",
+  "Grammar Validation": "Checks website content for placeholder text, empty headings, and missing page titles.",
+  "Functional Validation": "Checks for broken links, broken images/resources, and browser console errors on every page.",
 };
 
-const DEFAULT_SELECTED: ValidationType[] = ["UI Validation", "Figma Comparison", "Grammar Validation"];
+// Deliberately empty — nothing is pre-selected. Every test that runs should be a choice the user
+// actually made, not a default they didn't notice (this used to silently pre-check UI Validation/
+// Figma Comparison/Grammar Validation, which ran even when nothing meaningful was configured for
+// them and made genuinely wanted checks like Functional Validation easy to miss).
+const DEFAULT_SELECTED: ValidationType[] = [];
 
 export function AuditConfigForm({
   projects,

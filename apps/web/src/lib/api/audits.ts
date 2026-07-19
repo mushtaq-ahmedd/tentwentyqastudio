@@ -54,7 +54,20 @@ export async function fetchAudit(auditId: string): Promise<ApiResponse<Audit>> {
   });
 }
 
-/** The one audit currently running, if any — powers the persistent header pill. */
+/** No audit observed in real use has taken anywhere near this long — a handful of pages across
+ * every V1 engine typically completes in 1-3 minutes. Past this, something crashed or hung. */
+const STALE_RUNNING_THRESHOLD_MS = 10 * 60 * 1000;
+
+/**
+ * The one audit currently running, if any — powers the persistent header pill. Self-healing: with
+ * no job queue (docs/03's flagged interim simplification), nothing else sweeps abandoned audits,
+ * so a RUNNING audit older than `STALE_RUNNING_THRESHOLD_MS` is marked FAILED right here instead
+ * of being shown as "active" forever. This is what let 14 real stuck audits (from crashes and
+ * from selecting a validation type before its engine was registered, during earlier development)
+ * silently accumulate and permanently freeze the header's live-audit pill at a stale audit's last
+ * progress percentage — every visitor's very first `fetchActiveAudit()` call after this fix ships
+ * will clean up whatever's currently stuck.
+ */
 export async function fetchActiveAudit(): Promise<ApiResponse<Audit | null>> {
   return guarded(async () => {
     const audit = await prisma.audit.findFirst({
@@ -62,7 +75,22 @@ export async function fetchActiveAudit(): Promise<ApiResponse<Audit | null>> {
       include: AUDIT_INCLUDE,
       orderBy: { startedAt: "desc" },
     });
-    return ok(audit ? toAudit(audit as AuditWithRelations) : null);
+    if (!audit) return ok(null);
+
+    if (Date.now() - audit.startedAt.getTime() > STALE_RUNNING_THRESHOLD_MS) {
+      await prisma.audit.update({
+        where: { id: audit.id },
+        data: {
+          status: "FAILED",
+          endedAt: new Date(),
+          currentEngine: null,
+          currentActivity: "Audit exceeded the maximum expected runtime and was marked failed.",
+        },
+      });
+      return ok(null);
+    }
+
+    return ok(toAudit(audit as AuditWithRelations));
   });
 }
 

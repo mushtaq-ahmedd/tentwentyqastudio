@@ -12,6 +12,17 @@ export async function fetchEnvironments(projectId: string): Promise<ApiResponse<
   });
 }
 
+/** Batched form of `fetchEnvironments` for pages that need every project's environments at once
+ * (e.g. Audit Center) — one query instead of one per project. */
+export async function fetchEnvironmentsForProjects(projectIds: string[]): Promise<ApiResponse<Environment[]>> {
+  return guarded(async () => {
+    await requireUser();
+    if (projectIds.length === 0) return ok([]);
+    const environments = await prisma.environment.findMany({ where: { projectId: { in: projectIds } } });
+    return ok(environments.map(toEnvironment));
+  });
+}
+
 export type EnvironmentConfigOverrideInput = {
   screenshotQuality?: "High" | "Medium" | null;
   defaultTimeoutSeconds?: number | null;
