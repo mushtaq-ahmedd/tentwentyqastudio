@@ -250,6 +250,36 @@
 > second, all 7 engines executed for real (not skipped), and the audit reached `COMPLETED`,
 > confirmed via both the database and the worker's own structured log output
 > (`audit-job-active`/`audit-job-completed` events).
+>
+> **The Visual Engine now gates on OpenCV structural similarity (SSIM) and region detection, not
+> raw pixel-diff percentage.** Previously it flagged a finding whenever `pixelmatch`'s raw
+> per-pixel color-difference count crossed a fixed percentage — a metric that treats sub-pixel
+> anti-aliasing/font-rendering noise between two renders of an *unchanged* page exactly the same
+> as a genuine content change, a real source of false-positive "visual regression" findings.
+> `packages/engines/visual-engine/src/ssim.ts` implements windowed SSIM (Wang et al. 2004) via
+> `@techstark/opencv-js` (a WASM OpenCV port, chosen over the native `opencv4nodejs` binding
+> specifically because this environment has no Docker/system OpenCV install and no native build
+> toolchain — WASM needs neither) and finds contiguous *regions* where local similarity drops
+> below a cutoff (`GaussianBlur`+`threshold`+`findContours`+`boundingRect`), per docs/08's "region
+> detection... bounding boxes." The engine gates on **region count**, not whole-page mean SSIM: a
+> small localized change (one button, a line of text) is diluted by every unchanged surrounding
+> pixel almost to the noise floor when averaged over a full page screenshot, so mean SSIM alone
+> would miss exactly the small, real changes this feature exists to catch — region/contour
+> detection is what preserves sensitivity while still filtering ambient render noise. Raw
+> pixelmatch is retained only to render the human-reviewable highlighted diff evidence image, not
+> to decide whether a finding exists. Confidence stays at 0.75 (unchanged) — SSIM fixed the
+> anti-aliasing false-positive class specifically, not the separate, still-open "was this change
+> intentional" ambiguity, so the confidence band doesn't move. **Live-verified** two ways: (1)
+> `ssim.verify.ts`, a manual fixture script (no test runner exists in this repo — same pattern as
+> `element-matching-engine`'s `matching.verify.ts`) confirming identical images score ~1.0 SSIM
+> with zero regions, mild per-pixel rendering noise (±4/channel) scores >0.9 SSIM with zero
+> false-positive regions, and a genuine 30×30 changed block is caught as exactly one region
+> overlapping the actual changed area; (2) a real audit-over-audit run through the full pipeline
+> and BullMQ worker against a live fixture page — a baseline audit, then a second audit after
+> changing one button's color — produced exactly one "Visual Regression" finding, region
+> `(623,313) 194x74px`, closely matching the button's actual on-screen position and size, with
+> 99.6% overall SSIM (the change is a tiny fraction of the page) but still correctly flagged via
+> region detection at 1.2% raw pixel difference.
 
 ## Architecture Philosophy
 

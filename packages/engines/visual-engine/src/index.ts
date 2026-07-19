@@ -9,14 +9,18 @@ import {
   type EngineContext,
   type EngineFinding,
 } from "@tentwenty/core";
+import { computeSsim } from "./ssim";
 
-/** Percentage of differing pixels that triggers a finding. */
-const DIFF_THRESHOLD_PERCENT = 1;
-/** pixelmatch's own per-pixel color-difference sensitivity (0-1, lower = more sensitive). */
+/** pixelmatch's own per-pixel color-difference sensitivity (0-1, lower = more sensitive) — still
+ * used to render the highlighted diff evidence image (a human-reviewable visualization), even
+ * though it's no longer what decides whether a finding is raised (see ssim.ts's header comment
+ * for why: raw pixel-diff can't distinguish a genuine change from anti-aliasing/render noise). */
 const PIXELMATCH_THRESHOLD = 0.1;
 /** Medium, not High — no Ignore Rules / Approved Differences exist yet (docs/04 requires the
  * Visual Engine to respect both; see README), so legitimately dynamic content (ads, timestamps,
- * rotating banners) isn't filtered and can produce a real-but-expected difference. */
+ * rotating banners) isn't filtered and can produce a real-but-expected structural change. SSIM
+ * region detection fixed the *anti-aliasing false-positive* problem, but not this separate,
+ * still-open ambiguity — so confidence stays in the same band, not higher. */
 const CONFIDENCE = 0.75;
 
 function findingBase(context: EngineContext): Pick<EngineFinding, "pageUrl" | "engine"> {
@@ -26,9 +30,9 @@ function findingBase(context: EngineContext): Pick<EngineFinding, "pageUrl" | "e
 export const visualEngine: Engine = {
   id: "visual-engine",
   name: "VISUAL",
-  version: "0.1.0",
+  version: "0.2.0",
   description:
-    "Pixel-level audit-over-audit regression detection — compares this page's screenshot against the most recent prior audit's screenshot of the same page (docs/04 Visual Engine).",
+    "Audit-over-audit regression detection — compares this page's screenshot against the most recent prior audit's screenshot via OpenCV structural similarity (SSIM) and region/contour detection, not raw pixel-diff percentage (docs/04 Visual Engine, docs/08 OpenCV).",
   dependencies: ["browser-engine"],
   supportedValidationTypes: [],
   scope: "page",
@@ -71,13 +75,25 @@ export const visualEngine: Engine = {
     }
 
     const { width, height } = current;
+
+    // SSIM + region detection decides *whether* there's a genuine finding (docs/08: OpenCV
+    // "structural similarity... region detection... bounding boxes") — see ssim.ts's header for
+    // why whole-page mean SSIM alone isn't the right gate (a single changed button is diluted by
+    // every unchanged pixel around it) and why region-based detection is what actually filters
+    // anti-aliasing/render noise without losing sensitivity to small, real changes.
+    const ssimResult = await computeSsim(
+      { data: current.data, width: current.width, height: current.height },
+      { data: previous.data, width: previous.width, height: previous.height }
+    );
+    if (ssimResult.changedRegions.length === 0) return [];
+
+    // pixelmatch still renders the highlighted diff image — a human-reviewable visualization,
+    // even though SSIM (not raw diffPercent) decides whether this finding exists at all.
     const diff = new PNG({ width, height });
     const diffPixelCount = pixelmatch(current.data, previous.data, diff.data, width, height, {
       threshold: PIXELMATCH_THRESHOLD,
     });
     const diffPercent = (diffPixelCount / (width * height)) * 100;
-
-    if (diffPercent < DIFF_THRESHOLD_PERCENT) return [];
 
     const diffImagePath = await uploadEvidence(
       context.auditId,
@@ -87,18 +103,24 @@ export const visualEngine: Engine = {
       "image/png"
     );
 
+    const regionCount = ssimResult.changedRegions.length;
+    const regionSummary = ssimResult.changedRegions
+      .slice(0, 5)
+      .map((r) => `(${r.x},${r.y}) ${r.width}x${r.height}px`)
+      .join("; ");
+
     return [
       {
         ...findingBase(context),
         severity: "MEDIUM",
         confidence: CONFIDENCE,
         category: "Visual Regression",
-        title: `Visual difference detected (${diffPercent.toFixed(1)}% of pixels changed)`,
-        description: `This page's screenshot differs from the most recent prior audit's screenshot of it by ${diffPercent.toFixed(1)}% of pixels.`,
+        title: `Visual difference detected (${regionCount} region${regionCount > 1 ? "s" : ""} changed)`,
+        description: `This page's screenshot differs structurally from the most recent prior audit's screenshot of it in ${regionCount} distinct region(s): ${regionSummary}. Overall structural similarity: ${(ssimResult.meanSsim * 100).toFixed(1)}%; raw pixel difference: ${diffPercent.toFixed(1)}%.`,
         expectedResult: "This page renders the same as it did in the most recent prior audit.",
-        actualResult: `${diffPercent.toFixed(1)}% of pixels changed since the last audit.`,
+        actualResult: `${regionCount} region(s) changed: ${regionSummary}.`,
         businessImpact: "An unreviewed visual change may be an unintended regression, or a deploy that altered the page without sign-off.",
-        suggestedResolution: "Review the highlighted diff image. If this change was intentional, no action is needed — this audit's screenshot automatically becomes the new baseline for the next one.",
+        suggestedResolution: "Review the highlighted diff image and the changed region(s) listed above. If this change was intentional, no action is needed — this audit's screenshot automatically becomes the new baseline for the next one.",
         evidence: [
           { type: "HIGHLIGHTED_SCREENSHOT", content: diffImagePath },
           { type: "SCREENSHOT", content: artifacts.screenshotPath },
