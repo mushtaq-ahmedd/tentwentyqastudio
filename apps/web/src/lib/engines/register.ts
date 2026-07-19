@@ -11,3 +11,4 @@ import "@tentwenty/figma-engine";
 import "@tentwenty/element-matching-engine";
 import "@tentwenty/ui-validation-engine";
 import "@tentwenty/confidence-engine";
+import "@tentwenty/visual-engine";

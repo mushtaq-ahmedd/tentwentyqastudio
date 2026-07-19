@@ -78,6 +78,22 @@
 > the same lipsum.com environment showed the exact predicted math — Content Engine's 0.97
 > baseline confidence became 0.99 (both bonuses fired, capped) on the recurrence of the same
 > "Placeholder Content" category finding.
+>
+> **Visual** (`visual-engine`) also exists now — unconditionally included on every audit like
+> Discovery/Browser/Confidence/Report. Implements docs/04's Visual Engine literally (Pixelmatch,
+> "Reference Screenshot → Current Screenshot → Pixel Comparison"), with the Reference Screenshot
+> being the most recent *prior audit's* screenshot of the same page (a new `PageScreenshot` table,
+> written unconditionally by the Browser Engine, independent of whether any Finding ever
+> references a given screenshot as Evidence) — audit-over-audit regression, not a Figma-baseline
+> comparison. Confidence is deliberately capped at 0.75 (Medium) rather than higher, because
+> docs/04's Visual Engine rule ("must respect Ignore Rules and Approved Differences... not a raw
+> pixel diff with no context") isn't honored yet — neither mechanism exists in the schema. Fully
+> live-verified without any Figma dependency: two real audits of an unchanged page produced zero
+> findings; two real audits of a page with a deliberate, real content change (added, then removed)
+> produced one correctly-scoped "Visual Regression" finding with a real diff percentage and a real
+> uploaded diff image (the first engine to produce `HIGHLIGHTED_SCREENSHOT` evidence). See the
+> engine's README for a flagged naming overlap with "Visual Regression" listed among *future*
+> engines in this doc's own Scalability Rule section, below.
 
 ## Architecture Philosophy
 

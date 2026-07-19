@@ -85,9 +85,28 @@ model Project {
   audits            Audit[]
   reports           Report[]
   figmaFileCache    FigmaFileCache[]
+  pageScreenshots   PageScreenshot[]
 
   @@index([ownerId])
   @@map("projects")
+}
+
+/// Durable record of every page screenshot the Browser Engine captures, independent of whether
+/// any Finding ever references it as Evidence — a Finding only exists where a Validation engine
+/// found something, but the Visual Engine needs the most recent PRIOR audit's screenshot for a
+/// page regardless of whether that prior audit produced any findings on it (docs/04 Visual
+/// Engine: "Reference Screenshot → Current Screenshot → Pixel Comparison").
+model PageScreenshot {
+  id             String   @id @default(uuid()) @db.Uuid
+  projectId      String   @map("project_id") @db.Uuid
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  auditId        String   @map("audit_id") @db.Uuid
+  pageUrl        String   @map("page_url")
+  screenshotPath String   @map("screenshot_path")
+  capturedAt     DateTime @default(now()) @map("captured_at")
+
+  @@index([projectId, pageUrl, capturedAt])
+  @@map("page_screenshots")
 }
 
 /// Figma Engine cache (docs/04 "Rule: parsed Figma data must be cached — never re-download the

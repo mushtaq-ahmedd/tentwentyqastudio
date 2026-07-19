@@ -1,6 +1,7 @@
 import { chromium, type Browser } from "playwright";
 import {
   registerEngine,
+  recordPageScreenshot,
   TransientEngineError,
   uploadEvidence,
   type BrowserPageArtifacts,
@@ -117,6 +118,10 @@ export const browserEngine: Engine = {
           "text/plain"
         ),
       ]);
+
+      // Independent of Evidence (which only exists where a Finding references it) — the Visual
+      // Engine needs this page's screenshot history regardless of whether anything was found.
+      await recordPageScreenshot(context.projectId, context.auditId, page.url, screenshotPath);
 
       const artifacts: BrowserPageArtifacts = {
         screenshotPath,

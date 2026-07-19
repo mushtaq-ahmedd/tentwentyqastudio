@@ -21,7 +21,12 @@ Per docs/03 Engine Categories: **gathers data only, never judges.** `validate()`
 `[]`. The four uploadable artifacts (screenshot, DOM snapshot, console/network logs) go
 immediately to the private `evidence` Supabase Storage bucket via `uploadEvidence()`
 (`packages/core/src/storage.ts`) — docs/05: evidence lives in object storage, never as blobs in
-Postgres. The resulting storage paths, plus the raw DOM HTML, console/network text, and
+Postgres. Every screenshot is also recorded in `PageScreenshot` (`recordPageScreenshot()`,
+`packages/core/src/screenshot-history.ts`) independent of whether any Finding ever references it
+as Evidence — the Visual Engine needs a page's screenshot history regardless of whether a given
+past audit found anything on it.
+
+The resulting storage paths, plus the raw DOM HTML, console/network text, and
 `domElements` (kept in memory for this run only — not uploaded, since nothing needs to cite them
 as a Finding's evidence yet), are written to `context.sharedResources.pageArtifacts[page.url]` for
 downstream engines (Content, Functional, Element Matching) to consume without re-fetching or

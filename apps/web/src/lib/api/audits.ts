@@ -111,6 +111,9 @@ export async function startAudit(input: {
             // first, so it always runs once any page-level validation type is selected — same
             // "always included" treatment as Discovery/Report, not user-selectable.
             { engine: "BROWSER", status: "WAITING" },
+            // Audit-over-audit pixel regression detection — unconditional like Browser itself,
+            // not gated behind any selected validation type (docs/04 Visual Engine).
+            { engine: "VISUAL", status: "WAITING" },
             ...engineNames.map((engine) => ({ engine: engine as never, status: "WAITING" as const })),
             // Blends every Finding's confidence after Validation engines run (docs/03 "no single
             // Engine decides the final confidence") — unconditional, not user-selectable, same

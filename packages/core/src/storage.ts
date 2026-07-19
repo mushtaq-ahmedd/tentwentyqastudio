@@ -62,3 +62,10 @@ export async function downloadEvidenceText(path: string): Promise<string> {
   if (error || !data) throw new Error(`Failed to download evidence "${path}": ${error?.message}`);
   return data.text();
 }
+
+/** Reads back binary evidence (screenshots) — the Visual Engine's pixel comparison input. */
+export async function downloadEvidenceBuffer(path: string): Promise<Buffer> {
+  const { data, error } = await storageClient().storage.from(BUCKET).download(path);
+  if (error || !data) throw new Error(`Failed to download evidence "${path}": ${error?.message}`);
+  return Buffer.from(await data.arrayBuffer());
+}
