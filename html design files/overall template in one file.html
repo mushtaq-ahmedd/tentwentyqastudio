@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TenTwenty QA Studio — Product Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --slate-25:#FAFBFC; --slate-50:#F5F6F8; --slate-100:#EBEDF0; --slate-200:#DCE0E5; --slate-300:#C2C8D0;
+  --slate-400:#9AA3AF; --slate-500:#6B7684; --slate-600:#4C5563; --slate-700:#333B47; --slate-800:#20252E; --slate-900:#12151B;
+  --teal-50:#EAF5F3; --teal-100:#CDE7E2; --teal-500:#0F6B5C; --teal-600:#0C5A4E; --teal-700:#0A4A40;
+  --green-100:#DCF3E3; --green-500:#1F8A4C; --green-700:#166238;
+  --amber-100:#FBEACB; --amber-500:#B5790A; --amber-700:#8A5B06;
+  --red-100:#FBDEDC; --red-500:#C1362A; --red-700:#932A20;
+  --blue-100:#DCE9F8; --blue-500:#1E5FA8; --blue-700:#16487F;
+  --color-bg-page:var(--slate-50); --color-bg-surface:#fff; --color-bg-surface-secondary:var(--slate-25);
+  --color-bg-sidebar:var(--slate-900); --color-bg-hover:var(--slate-100);
+  --color-text-primary:var(--slate-900); --color-text-secondary:var(--slate-500);
+  --color-text-on-dark:#fff; --color-text-on-dark-secondary:var(--slate-400);
+  --color-border-default:var(--slate-200); --color-border-strong:var(--slate-300);
+  --color-accent-default:var(--teal-500); --color-accent-hover:var(--teal-600); --color-accent-subtle:var(--teal-50);
+  --color-success-default:var(--green-500); --color-success-subtle:var(--green-100); --color-success-subtle-text:var(--green-700);
+  --color-warning-default:var(--amber-500); --color-warning-subtle:var(--amber-100); --color-warning-subtle-text:var(--amber-700);
+  --color-error-default:var(--red-500); --color-error-subtle:var(--red-100); --color-error-subtle-text:var(--red-700);
+  --color-info-default:var(--blue-500); --color-info-subtle:var(--blue-100); --color-info-subtle-text:var(--blue-700);
+  --radius-control:6px; --radius-card:8px;
+  --shadow-subtle:0 1px 2px rgba(18,21,27,0.05);
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Inter',sans-serif;background:var(--color-bg-page);color:var(--color-text-primary);font-size:14px;line-height:1.45;}
+.mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+a{text-decoration:none;color:inherit;}
+
+/* Shell */
+.app-shell{display:flex;height:100vh;overflow:hidden;}
+.sidebar{width:244px;background:var(--color-bg-sidebar);display:flex;flex-direction:column;padding:20px 10px;flex-shrink:0;}
+.sidebar-brand{display:flex;align-items:center;gap:8px;padding:6px 12px 22px;}
+.sidebar-brand .mark{width:20px;height:20px;border-radius:5px;background:var(--color-accent-default);flex-shrink:0;}
+.sidebar-brand .name{font-weight:600;font-size:14px;color:#fff;letter-spacing:-0.01em;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px 9px 14px;border-radius:6px;color:var(--color-text-on-dark-secondary);
+  font-size:12.5px;font-weight:500;cursor:pointer;margin-bottom:1px;border-left:2px solid transparent;
+  transition:background .12s ease,color .12s ease;user-select:none;}
+.nav-item svg{width:15px;height:15px;flex-shrink:0;opacity:.8;}
+.nav-item:hover{background:rgba(255,255,255,.05);color:#fff;}
+.nav-item.active{background:rgba(15,107,92,.22);color:#fff;border-left:2px solid var(--color-accent-default);}
+.nav-item.active svg{opacity:1;}
+.nav-spacer{flex:1;}
+.nav-lower{border-top:1px solid rgba(255,255,255,.08);margin-top:6px;padding-top:6px;}
+.main{flex:1;display:flex;flex-direction:column;min-width:0;}
+.header{height:64px;flex-shrink:0;background:#fff;border-bottom:1px solid var(--color-border-default);display:flex;align-items:center;justify-content:space-between;padding:0 28px;}
+.header-left{display:flex;align-items:center;gap:12px;}
+.page-title{font-size:20px;font-weight:600;letter-spacing:-0.01em;margin:0;}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:6px;border:1px solid var(--color-border-default);
+  background:var(--color-bg-surface-secondary);font-size:12px;color:var(--color-text-secondary);font-weight:500;}
+.pill.warn{border-color:var(--color-warning-default);color:var(--color-warning-subtle-text);background:var(--color-warning-subtle);}
+.content{flex:1;overflow-y:auto;padding:24px 28px;display:flex;flex-direction:column;gap:24px;}
+
+/* Buttons */
+.btn{border:none;border-radius:6px;font-weight:500;font-size:13px;cursor:pointer;padding:9px 16px;transition:background .12s ease,border-color .12s ease;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--color-accent-default);color:#fff;}
+.btn-primary:hover{background:var(--color-accent-hover);}
+.btn-secondary{background:var(--color-bg-surface-secondary);color:var(--color-text-primary);border:1px solid var(--color-border-default);}
+.btn-secondary:hover{background:var(--color-bg-hover);}
+.btn-outline{background:transparent;border:1px solid var(--color-border-strong);}
+.btn-text{background:transparent;color:var(--color-accent-default);padding:9px 4px;}
+.btn-danger{background:var(--color-error-default);color:#fff;}
+.btn[disabled]{opacity:.45;cursor:not-allowed;}
+
+/* Layout helpers */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
+.card{background:#fff;border:1px solid var(--color-border-default);border-radius:8px;padding:18px 20px;box-shadow:var(--shadow-subtle);}
+.card-title{font-size:13.5px;font-weight:600;margin:0 0 14px;display:flex;align-items:center;justify-content:space-between;}
+.card-title a.link{font-size:12px;font-weight:500;color:var(--color-accent-default);}
+.card-title a.link:hover{text-decoration:underline;}
+.link{color:var(--color-accent-default);cursor:pointer;font-weight:500;}
+.link:hover{text-decoration:underline;}
+.section-title{font-size:15px;font-weight:600;margin:0 0 4px;}
+
+/* Badges / chips */
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.01em;flex-shrink:0;}
+.badge-critical{background:var(--color-error-subtle);color:var(--color-error-subtle-text);}
+.badge-high{background:var(--color-warning-subtle);color:var(--color-warning-subtle-text);}
+.badge-medium{background:var(--color-info-subtle);color:var(--color-info-subtle-text);}
+.badge-low{background:var(--color-bg-surface-secondary);color:var(--color-text-secondary);border:1px solid var(--color-border-default);}
+.badge-new{background:var(--color-info-subtle);color:var(--color-info-subtle-text);}
+.badge-accepted{background:var(--color-success-subtle);color:var(--color-success-subtle-text);}
+.badge-rejected{background:var(--color-bg-surface-secondary);color:var(--color-text-secondary);}
+.severity-bar{width:3px;align-self:stretch;border-radius:2px;flex-shrink:0;}
+.severity-bar.critical{background:var(--color-error-default);}
+.severity-bar.high{background:var(--color-warning-default);}
+.severity-bar.medium{background:var(--color-info-default);}
+.severity-bar.low{background:var(--color-border-strong);}
+.status-chip{padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:500;}
+.status-completed{background:var(--color-success-subtle);color:var(--color-success-subtle-text);}
+.status-running{background:var(--color-info-subtle);color:var(--color-info-subtle-text);}
+.status-queued{background:var(--color-bg-surface-secondary);color:var(--color-text-secondary);}
+.status-failed{background:var(--color-error-subtle);color:var(--color-error-subtle-text);}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--color-info-default);display:inline-block;position:relative;}
+.status-dot.live::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:1px solid var(--color-info-default);opacity:.5;animation:pulse-ring 1.8s ease-out infinite;}
+@keyframes pulse-ring{0%{transform:scale(.6);opacity:.6;}100%{transform:scale(1.6);opacity:0;}}
+@media (prefers-reduced-motion: reduce){.status-dot.live::after{animation:none;}}
+
+/* Stats / progress */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px;}
+.stat .num{font-size:21px;font-weight:600;display:block;}
+.stat .label{font-size:11px;color:var(--color-text-secondary);margin-top:2px;}
+.stat.critical .num{color:var(--color-error-default);}
+.stat.high .num{color:var(--color-warning-default);}
+.progress-track{width:100%;height:6px;background:var(--color-bg-surface-secondary);border-radius:999px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--color-accent-default);border-radius:999px;transition:width .4s ease;}
+.progress-track.lg{height:10px;}
+
+/* Rows / lists */
+.list-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--color-border-default);gap:12px;}
+.list-row:last-child{border-bottom:none;padding-bottom:0;}
+.quick-action{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;border:1px solid var(--color-border-default);
+  background:#fff;font-size:13px;font-weight:500;cursor:pointer;transition:background .12s ease,border-color .12s ease;}
+.quick-action:hover{background:var(--color-bg-hover);border-color:var(--color-border-strong);}
+.quick-action svg{width:15px;height:15px;color:var(--color-text-secondary);}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;font-weight:500;color:var(--color-text-secondary);font-size:11px;text-transform:uppercase;letter-spacing:.04em;
+  padding:0 0 10px;border-bottom:1px solid var(--color-border-default);}
+td{padding:12px 0;border-bottom:1px solid var(--color-border-default);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr.clickable{cursor:pointer;}
+tr:hover td{background:var(--color-bg-surface-secondary);}
+
+/* Forms */
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:12px;font-weight:500;letter-spacing:0.01em;color:var(--color-text-secondary);}
+.field input[type=text], .field select, .field textarea{
+  border:1px solid var(--color-border-default);border-radius:6px;padding:10px 12px;font-family:inherit;font-size:14px;
+  background:#fff;color:var(--color-text-primary);}
+.field input:focus, .field select:focus, .field textarea:focus{outline:2px solid var(--color-accent-default);outline-offset:-1px;border-color:var(--color-accent-default);}
+.checkbox-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--color-border-default);}
+.checkbox-row:last-child{border-bottom:none;}
+.checkbox-row input{margin-top:3px;accent-color:var(--color-accent-default);width:16px;height:16px;}
+.checkbox-row .cb-title{font-weight:500;font-size:13.5px;}
+.checkbox-row .cb-desc{font-size:12px;color:var(--color-text-secondary);margin-top:2px;}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--color-border-default);}
+.tab{padding:10px 4px;margin-right:20px;font-size:13px;font-weight:500;color:var(--color-text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;}
+.tab.active{color:var(--color-text-primary);border-bottom-color:var(--color-accent-default);}
+
+/* Findings split view */
+.findings-layout{display:grid;grid-template-columns:380px 1fr;gap:20px;height:100%;flex:1;min-height:0;}
+.findings-list{overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px;}
+.finding-card{display:flex;gap:10px;padding:12px;border-radius:8px;border:1px solid var(--color-border-default);background:#fff;cursor:pointer;}
+.finding-card.selected{border-color:var(--color-accent-default);background:var(--color-accent-subtle);}
+.finding-card .ftitle{font-weight:500;font-size:13px;margin-bottom:3px;}
+.finding-card .fmeta{font-size:11.5px;color:var(--color-text-secondary);}
+.detail-section{margin-bottom:18px;}
+.detail-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--color-text-secondary);margin-bottom:6px;}
+.detail-value{font-size:13.5px;}
+.evidence-box{background:var(--slate-900);color:#dfe3e8;border-radius:8px;padding:14px;font-family:'IBM Plex Mono',monospace;font-size:12px;overflow-x:auto;}
+
+/* Empty state */
+.empty-state{text-align:center;padding:56px 24px;color:var(--color-text-secondary);}
+.empty-state .icon{font-size:28px;margin-bottom:10px;}
+.empty-state .title{font-size:14px;font-weight:600;color:var(--color-text-primary);margin-bottom:6px;}
+
+/* Modal / overlay */
+.modal-backdrop{position:fixed;inset:0;background:rgba(18,21,27,0.45);display:flex;align-items:center;justify-content:center;z-index:100;}
+.modal{background:#fff;border-radius:12px;width:560px;max-width:92vw;max-height:88vh;overflow-y:auto;box-shadow:0 24px 48px rgba(18,21,27,0.24);}
+.modal-header{padding:20px 24px;border-bottom:1px solid var(--color-border-default);display:flex;align-items:center;justify-content:space-between;}
+.modal-header h2{font-size:16px;font-weight:600;margin:0;}
+.modal-close{cursor:pointer;color:var(--color-text-secondary);font-size:18px;line-height:1;background:none;border:none;padding:4px;}
+.modal-body{padding:24px;display:flex;flex-direction:column;gap:16px;}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--color-border-default);display:flex;justify-content:space-between;align-items:center;}
+.step-indicator{display:flex;gap:6px;padding:16px 24px 0;}
+.step-dot{flex:1;height:3px;border-radius:999px;background:var(--color-border-default);}
+.step-dot.done, .step-dot.active{background:var(--color-accent-default);}
+
+/* Project workspace */
+.project-tabs{display:flex;gap:4px;border-bottom:1px solid var(--color-border-default);margin-bottom:4px;}
+.project-tab{padding:10px 2px;margin-right:24px;font-size:13px;font-weight:500;color:var(--color-text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;user-select:none;}
+.project-tab.active{color:var(--color-text-primary);border-bottom-color:var(--color-accent-default);}
+
+/* Knowledge module */
+.knowledge-layout{display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start;}
+.source-row{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--color-border-default);border-radius:8px;background:#fff;cursor:pointer;margin-bottom:8px;}
+.source-row.selected{border-color:var(--color-accent-default);background:var(--color-accent-subtle);}
+.source-icon{width:32px;height:32px;border-radius:6px;background:var(--color-bg-surface-secondary);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--color-text-secondary);}
+.source-icon svg{width:16px;height:16px;}
+.source-name{font-weight:500;font-size:13px;}
+.source-meta{font-size:11px;color:var(--color-text-secondary);margin-top:2px;}
+.upload-dropzone{border:1.5px dashed var(--color-border-strong);border-radius:8px;padding:24px;text-align:center;color:var(--color-text-secondary);font-size:12.5px;background:var(--color-bg-surface-secondary);}
+.filetype-badge{display:inline-block;padding:2px 8px;border-radius:4px;background:var(--color-bg-surface);border:1px solid var(--color-border-default);font-size:10.5px;color:var(--color-text-secondary);margin:2px;}
+.ai-understanding-row{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--color-border-default);}
+.ai-understanding-row:last-child{border-bottom:none;}
+.ai-understanding-row .k-label{width:130px;flex-shrink:0;font-size:11.5px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.03em;padding-top:1px;}
+
+/* Environment cards */
+.env-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+.env-card{border:1px solid var(--color-border-default);border-radius:8px;padding:16px;background:#fff;}
+.env-card .env-name{font-weight:600;font-size:13.5px;margin-bottom:2px;}
+.env-card .env-url{font-size:12px;color:var(--color-text-secondary);font-family:'IBM Plex Mono',monospace;margin-bottom:10px;}
+.env-card .env-actions{display:flex;gap:8px;margin-top:12px;}
+
+/* Auth (Login / Sign Up) */
+.auth-shell{display:flex;height:100vh;}
+.auth-brand{width:42%;background:var(--color-bg-sidebar);color:#fff;display:flex;flex-direction:column;justify-content:space-between;padding:48px;flex-shrink:0;}
+.auth-brand .mark-row{display:flex;align-items:center;gap:10px;}
+.auth-brand .mark-row .mark{width:24px;height:24px;border-radius:6px;background:var(--color-accent-default);}
+.auth-brand .mark-row .name{font-weight:600;font-size:16px;}
+.auth-brand h2{font-size:28px;font-weight:600;line-height:1.3;letter-spacing:-0.01em;max-width:380px;margin:0;}
+.auth-brand .tagline{color:var(--color-text-on-dark-secondary);font-size:13.5px;margin-top:14px;max-width:340px;}
+.auth-brand .quote{font-size:12px;color:var(--color-text-on-dark-secondary);}
+.auth-form-panel{flex:1;display:flex;align-items:center;justify-content:center;background:var(--color-bg-page);}
+.auth-form{width:360px;display:flex;flex-direction:column;gap:16px;}
+.auth-form h1{font-size:20px;font-weight:600;margin:0 0 2px;}
+.auth-form .sub{font-size:13px;color:var(--color-text-secondary);margin-bottom:8px;}
+.auth-form .switch{text-align:center;font-size:13px;color:var(--color-text-secondary);margin-top:4px;}
+.auth-form .divider{display:flex;align-items:center;gap:10px;color:var(--color-text-secondary);font-size:11.5px;margin:2px 0;}
+.auth-form .divider::before, .auth-form .divider::after{content:'';flex:1;height:1px;background:var(--color-border-default);}
+
+/* Focus visibility (accessibility + polish) */
+button:focus-visible, .nav-item:focus-visible, .quick-action:focus-visible, a:focus-visible,
+input:focus-visible, select:focus-visible, textarea:focus-visible, .project-tab:focus-visible, .tab:focus-visible {
+  outline: 2px solid var(--color-accent-default); outline-offset: 2px; border-radius: 4px;
+}
+
+/* Micro-interactions */
+.btn{transition:background .12s ease,border-color .12s ease,transform .08s ease;}
+.btn:active{transform:scale(0.97);}
+.nav-item{transition:background .15s ease,color .15s ease,border-left-color .15s ease;}
+.quick-action{transition:background .12s ease,border-color .12s ease,transform .08s ease;}
+.quick-action:active{transform:scale(0.98);}
+.card{transition:box-shadow .18s ease,transform .18s ease;}
+tr.clickable{transition:background .1s ease;}
+.finding-card{transition:border-color .12s ease,background .12s ease,transform .1s ease;}
+.finding-card:hover{border-color:var(--color-border-strong);}
+.finding-card:active{transform:scale(0.995);}
+.source-row{transition:border-color .12s ease,background .12s ease;}
+.env-card{transition:box-shadow .18s ease;}
+.env-card:hover{box-shadow:var(--shadow-subtle);}
+
+/* Content transition on navigation */
+@keyframes content-in { from{opacity:0;transform:translateY(4px);} to{opacity:1;transform:translateY(0);} }
+.content-enter{animation:content-in .22s ease both;}
+
+/* Skeleton loading */
+.skeleton{background:linear-gradient(100deg, var(--color-bg-surface-secondary) 30%, var(--slate-100) 50%, var(--color-bg-surface-secondary) 70%);
+  background-size:200% 100%;animation:skeleton-shimmer 1.3s ease-in-out infinite;border-radius:6px;}
+@keyframes skeleton-shimmer{0%{background-position:160% 0;}100%{background-position:-60% 0;}}
+.skeleton-block{height:14px;margin-bottom:8px;}
+.skeleton-card{background:#fff;border:1px solid var(--color-border-default);border-radius:8px;padding:18px 20px;}
+@media (prefers-reduced-motion: reduce){.skeleton{animation:none;background:var(--color-bg-surface-secondary);} .content-enter{animation:none;}}
+
+/* Modal enter/exit animation */
+@keyframes modal-in { from{opacity:0;transform:scale(0.97) translateY(6px);} to{opacity:1;transform:scale(1) translateY(0);} }
+@keyframes backdrop-in { from{opacity:0;} to{opacity:1;} }
+.modal-backdrop{animation:backdrop-in .15s ease both;}
+.modal{animation:modal-in .18s cubic-bezier(.2,.8,.3,1) both;}
+.modal-backdrop.closing{animation:backdrop-in .12s ease reverse both;}
+.modal-backdrop.closing .modal{animation:modal-in .12s ease reverse both;}
+@media (prefers-reduced-motion: reduce){.modal-backdrop, .modal{animation:none;}}
+
+/* Toasts */
+#toast-root{position:fixed;bottom:24px;right:24px;z-index:400;display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
+.toast{display:flex;align-items:center;gap:10px;background:var(--slate-900);color:#fff;padding:12px 16px;border-radius:8px;
+  font-size:13px;font-weight:500;box-shadow:var(--shadow-medium);max-width:340px;animation:toast-in .2s cubic-bezier(.2,.8,.3,1) both;}
+.toast.success{background:var(--green-700);}
+.toast.leaving{animation:toast-out .18s ease both;}
+@keyframes toast-in{from{opacity:0;transform:translateY(8px) scale(.98);}to{opacity:1;transform:translateY(0) scale(1);}}
+@keyframes toast-out{from{opacity:1;}to{opacity:0;transform:translateX(8px);}}
+.toast .dot{width:6px;height:6px;border-radius:50%;background:var(--color-accent-default);flex-shrink:0;}
+.toast.success .dot{background:var(--green-100);}
+
+/* Tooltip (data-tooltip attribute) */
+[data-tooltip]{position:relative;cursor:help;}
+[data-tooltip]::after{
+  content:attr(data-tooltip); position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%) translateY(2px);
+  background:var(--slate-900); color:#fff; font-size:11px; font-weight:500; padding:7px 10px; border-radius:6px;
+  white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .12s ease, transform .12s ease; z-index:50;
+  box-shadow:var(--shadow-medium);
+}
+[data-tooltip]::before{
+  content:''; position:absolute; bottom:calc(100% + 3px); left:50%; transform:translateX(-50%);
+  border:5px solid transparent; border-top-color:var(--slate-900); opacity:0; transition:opacity .12s ease; pointer-events:none;
+}
+[data-tooltip]:hover::after, [data-tooltip]:hover::before{opacity:1; transform:translateX(-50%) translateY(0);}
+
+/* Header profile + live indicator */
+.header-right{display:flex;align-items:center;gap:14px;}
+.live-audit-pill{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--color-info-subtle);
+  color:var(--color-info-subtle-text);font-size:12px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:border-color .12s ease;}
+.live-audit-pill:hover{border-color:var(--color-info-default);}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--color-accent-default);color:#fff;display:flex;align-items:center;
+  justify-content:center;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;user-select:none;}
+.profile-menu{position:relative;}
+.profile-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:#fff;border:1px solid var(--color-border-default);
+  border-radius:8px;box-shadow:var(--shadow-medium);width:200px;padding:6px;z-index:60;animation:modal-in .12s ease both;}
+.profile-dropdown .pd-item{padding:9px 10px;border-radius:6px;font-size:13px;cursor:pointer;transition:background .1s ease;}
+.profile-dropdown .pd-item:hover{background:var(--color-bg-hover);}
+.profile-dropdown .pd-divider{height:1px;background:var(--color-border-default);margin:6px 0;}
+.profile-dropdown .pd-email{font-size:11.5px;color:var(--color-text-secondary);padding:6px 10px 8px;}
+
+/* Bulk action bar (Findings) */
+.bulk-bar{display:flex;align-items:center;justify-content:space-between;background:var(--slate-900);color:#fff;padding:10px 14px;
+  border-radius:8px;font-size:13px;animation:content-in .15s ease both;}
+.bulk-bar .btn-secondary{background:rgba(255,255,255,0.12);color:#fff;border:none;}
+.bulk-bar .btn-secondary:hover{background:rgba(255,255,255,0.2);}
+.finding-checkbox{margin-top:2px;accent-color:var(--color-accent-default);width:15px;height:15px;flex-shrink:0;}
+</style>
+</head>
+<body>
+<div class="app-shell" style="display:none;">
+  <nav class="sidebar" id="sidebar"></nav>
+  <div class="main">
+    <header class="header" id="header"></header>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+<div id="auth-root" style="display:none;"></div>
+<div id="modal-root"></div>
+<div id="confirm-root"></div>
+<div id="toast-root"></div>
+
+<script>
+const ICONS = {
+  dashboard:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="6" height="6" rx="1"/><rect x="11.5" y="2.5" width="6" height="6" rx="1"/><rect x="2.5" y="11.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/></svg>',
+  projects:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 5.5a1 1 0 0 1 1-1h3l1.5 2H16a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9Z"/></svg>',
+  runs:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2.5"/></svg>',
+  findings:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2.5 2.5 15.5h15L10 2.5Z"/><path d="M10 8v3.5"/><circle cx="10" cy="13.2" r="0.6" fill="currentColor" stroke="none"/></svg>',
+  reports:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 2.5h7l3 3v12h-10Z"/><path d="M7 9h6M7 12h6M7 15h3.5"/></svg>',
+  history:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6.5v3.8l2.8 1.7"/></svg>',
+  settings:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v1.6M10 15.4V17M17 10h-1.6M4.6 10H3M14.9 5.1l-1.2 1.2M6.3 13.7l-1.2 1.2M14.9 14.9l-1.2-1.2M6.3 6.3 5.1 5.1"/></svg>',
+  admin:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2.5 4 5v5c0 4 2.6 6 6 7.5 3.4-1.5 6-3.5 6-7.5V5l-6-2.5Z"/></svg>',
+  help:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M8 8a2 2 0 1 1 3 1.7c-.7.5-1 .9-1 1.8"/><circle cx="10" cy="14" r="0.6" fill="currentColor" stroke="none"/></svg>',
+  plus:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>',
+  play:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 4.5v11l9-5.5-9-5.5Z"/></svg>',
+  figma:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="9" height="9" rx="1"/><path d="M7 13v2a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-2"/></svg>',
+  doc:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 2.5h7l3 3v12h-10Z"/><path d="M7 9h6M7 12h6M7 15h3.5"/></svg>',
+  sheet:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="14" rx="1.5"/><path d="M3 8h14M8 3v14"/></svg>',
+  checklist:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h1.5M4 10h1.5M4 14h1.5"/><path d="M8 6h8M8 10h8M8 14h8"/></svg>',
+};
+
+const NAV_TOP = [
+  {id:'dashboard', label:'Dashboard'},
+  {id:'projects', label:'Projects'},
+  {id:'runs', label:'Testing Runs'},
+  {id:'findings', label:'Findings'},
+  {id:'reports', label:'Reports'},
+  {id:'history', label:'History'},
+];
+const NAV_BOTTOM = [
+  {id:'settings', label:'Settings'},
+  {id:'admin', label:'Administration'},
+  {id:'help', label:'Help'},
+];
+
+let STATE = {
+  screen: 'dashboard', activeNav: 'dashboard', selectedFinding: 0, auditProgress: 72, reportTab: 'developer',
+  currentProject: 'Acme Corp Website', projectTab: 'overview', selectedSource: 0, newAccount: false, evidenceTab: 'Screenshot',
+  profileMenuOpen: false, liveAuditActive: true, selectedFindings: new Set(),
+  createProject: { open: false, step: 1, name:'', description:'', client:'', language:'English', timezone:'UTC (GMT+0)',
+    environments:['Development','QA'], authMethod:'Username / Password' },
+  confirm: { open: false },
+  envModal: { open: false },
+  uploadModal: { open: false, method: 'file' },
+  inviteModal: { open: false },
+  figmaModal: { open: false },
+};
+
+function toast(message, type){
+  const root = document.getElementById('toast-root');
+  const el = document.createElement('div');
+  el.className = 'toast' + (type === 'success' ? ' success' : '');
+  el.innerHTML = `<span class="dot"></span><span>${message}</span>`;
+  root.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('leaving');
+    setTimeout(() => el.remove(), 200);
+  }, 3200);
+}
+
+function skeletonHTML(){
+  return `
+    <div class="skeleton-card">
+      <div class="skeleton skeleton-block" style="width:38%;"></div>
+      <div class="skeleton skeleton-block" style="width:92%;"></div>
+      <div class="skeleton skeleton-block" style="width:70%;height:28px;margin-top:4px;"></div>
+    </div>
+    <div class="grid-2">
+      <div class="skeleton-card"><div class="skeleton skeleton-block" style="width:50%;"></div><div class="skeleton skeleton-block" style="width:80%;"></div><div class="skeleton skeleton-block" style="width:60%;"></div></div>
+      <div class="skeleton-card"><div class="skeleton skeleton-block" style="width:50%;"></div><div class="skeleton skeleton-block" style="width:80%;"></div><div class="skeleton skeleton-block" style="width:60%;"></div></div>
+    </div>`;
+}
+
+function loadWithSkeleton(){
+  const el = document.getElementById('content');
+  el.classList.remove('content-enter');
+  el.innerHTML = skeletonHTML();
+  el.scrollTop = 0;
+  setTimeout(renderContent, 240);
+}
+
+function animateEntrances(){
+  document.querySelectorAll('[data-countup]').forEach(el => {
+    const target = parseInt(el.getAttribute('data-countup'), 10);
+    if (Number.isNaN(target)) return;
+    let cur = 0;
+    const step = Math.max(1, Math.round(target / 14));
+    const timer = setInterval(() => {
+      cur = Math.min(target, cur + step);
+      el.textContent = cur;
+      if (cur >= target) clearInterval(timer);
+    }, 16);
+  });
+  document.querySelectorAll('[data-target-width]').forEach(el => {
+    const w = el.getAttribute('data-target-width');
+    requestAnimationFrame(() => requestAnimationFrame(() => { el.style.width = w + '%'; }));
+  });
+}
+
+function navItem(item){
+  const active = item.id === STATE.activeNav ? ' active' : '';
+  return `<div class="nav-item${active}" onclick="navigate('${item.id}')">${ICONS[item.id]}<span>${item.label}</span></div>`;
+}
+
+function renderSidebar(){
+  document.getElementById('sidebar').innerHTML = `
+    <div class="sidebar-brand"><span class="mark"></span><span class="name">TenTwenty QA Studio</span></div>
+    ${NAV_TOP.map(navItem).join('')}
+    <div class="nav-spacer"></div>
+    <div class="nav-lower">
+      ${NAV_BOTTOM.map(navItem).join('')}
+      <div class="nav-item" onclick="logout()"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 4H5.5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1H8M13 14l3.5-4L13 6M16 10H8"/></svg><span>Log Out</span></div>
+    </div>
+  `;
+}
+
+function renderAuth(screen){
+  STATE.screen = screen;
+  document.querySelector('.app-shell').style.display = 'none';
+  const root = document.getElementById('auth-root');
+  root.style.display = 'block';
+  root.innerHTML = `
+    <div class="auth-shell">
+      <div class="auth-brand">
+        <div class="mark-row"><span class="mark"></span><span class="name">TenTwenty QA Studio</span></div>
+        <div>
+          <h2>Ship with confidence. Let the audits run themselves.</h2>
+          <div class="tagline">Connect a project, upload your requirements and test cases, and TenTwenty QA Studio handles UI validation, content, accessibility, and functional testing — automatically.</div>
+        </div>
+        <div class="quote">© 2026 TenTwenty. All audits, one workspace.</div>
+      </div>
+      <div class="auth-form-panel">
+        ${screen === 'signup' ? signupForm() : loginForm()}
+      </div>
+    </div>`;
+}
+
+function loginForm(){
+  return `
+    <div class="auth-form">
+      <div><h1>Log in to your workspace</h1><div class="sub">Welcome back — pick up right where you left off.</div></div>
+      <div class="field"><label>Work Email</label><input type="text" id="auth-email" placeholder="you@company.com"></div>
+      <div class="field"><label>Password</label><input type="text" id="auth-password" placeholder="••••••••"></div>
+      <div style="display:flex;justify-content:flex-end;"><a class="link" style="font-size:12px;" onclick="toast('Password reset email sent — check your inbox.')">Forgot password?</a></div>
+      <button class="btn btn-primary" style="justify-content:center;padding:11px;" onclick="STATE.newAccount=false; navigate('dashboard')">Log In</button>
+      <div class="divider">or</div>
+      <button class="btn btn-secondary" style="justify-content:center;padding:11px;" onclick="STATE.newAccount=false; navigate('dashboard')">Continue with Google</button>
+      <div class="switch">Don't have a workspace yet? <a class="link" onclick="navigate('signup')">Sign up</a></div>
+    </div>`;
+}
+
+function signupForm(){
+  return `
+    <div class="auth-form">
+      <div><h1>Create your workspace</h1><div class="sub">Set up TenTwenty QA Studio for your team in a couple of minutes.</div></div>
+      <div class="field"><label>Full Name</label><input type="text" placeholder="e.g. Mushtaq Ahmed"></div>
+      <div class="field"><label>Work Email</label><input type="text" placeholder="you@company.com"></div>
+      <div class="field"><label>Team / Company Name</label><input type="text" placeholder="e.g. TenTwenty Digital Agency"></div>
+      <div class="field"><label>Password</label><input type="text" placeholder="At least 8 characters"></div>
+      <button class="btn btn-primary" style="justify-content:center;padding:11px;" onclick="STATE.newAccount=true; navigate('dashboard')">Create Account</button>
+      <div style="font-size:11.5px;color:var(--color-text-secondary);text-align:center;">By continuing you agree to the Terms of Service and Privacy Policy.</div>
+      <div class="switch">Already have a workspace? <a class="link" onclick="navigate('login')">Log in</a></div>
+    </div>`;
+}
+
+const HEADERS = {
+  dashboard: {title:'Dashboard', project:'Acme Corp Website', env:'QA', action:{label:'Run Audit', icon:'play', onclick:"navigate('run-audit')"}},
+  projects: {title:'Projects', action:{label:'New Project', icon:'plus', onclick:"openCreateProject()"}},
+  runs: {title:'Testing Runs', project:'Acme Corp Website', env:'QA'},
+  findings: {title:'Findings', project:'Acme Corp Website', env:'QA'},
+  reports: {title:'Reports', project:'Acme Corp Website', env:'QA'},
+  history: {title:'Run History', project:'Acme Corp Website', env:'QA'},
+  'run-audit': {title:'Run Audit', project:'Acme Corp Website', env:'QA'},
+  'live-audit': {title:'Live Audit', project:'Acme Corp Website', env:'QA'},
+  'audit-summary': {title:'Audit Complete', project:'Acme Corp Website', env:'QA'},
+  settings: {title:'Settings'},
+  admin: {title:'Administration', action:{label:'Invite User', icon:'plus', onclick:"openInviteModal()"}},
+};
+
+function headerRightHTML(actionHTML){
+  return `
+    <div class="header-right">
+      ${STATE.liveAuditActive ? `<div class="live-audit-pill" onclick="navigate('live-audit')" data-tooltip="Content Validation running on Acme Corp Website"><span class="status-dot live"></span>Audit running · <span class="mono">72%</span></div>` : ''}
+      ${actionHTML || ''}
+      <div class="profile-menu">
+        <div class="avatar" onclick="toggleProfileMenu(event)">MA</div>
+        ${STATE.profileMenuOpen ? profileDropdownHTML() : ''}
+      </div>
+    </div>`;
+}
+function profileDropdownHTML(){
+  return `
+    <div class="profile-dropdown" onclick="event.stopPropagation()">
+      <div style="padding:8px 10px 2px;font-weight:600;font-size:13px;">Mushtaq Ahmed</div>
+      <div class="pd-email">mushtaq@tentwenty.me</div>
+      <div class="pd-divider"></div>
+      <div class="pd-item" onclick="navigate('settings')">Settings</div>
+      <div class="pd-item" onclick="navigate('admin')">Administration</div>
+      <div class="pd-divider"></div>
+      <div class="pd-item" onclick="logout()">Log Out</div>
+    </div>`;
+}
+function toggleProfileMenu(e){
+  e.stopPropagation();
+  STATE.profileMenuOpen = !STATE.profileMenuOpen;
+  renderHeader();
+}
+document.addEventListener('click', () => { if (STATE.profileMenuOpen) { STATE.profileMenuOpen = false; renderHeader(); } });
+
+function renderHeader(){
+  if (STATE.screen === 'project') {
+    document.getElementById('header').innerHTML = `
+      <div class="header-left">
+        <span class="pill" style="cursor:pointer;" onclick="navigate('projects')">← All Projects</span>
+        <h1 class="page-title">${STATE.currentProject}</h1>
+        <span class="pill">QA</span>
+      </div>
+      ${headerRightHTML('<button class="btn btn-primary" onclick="navigate(\'run-audit\')">' + ICONS.play + 'Run Audit</button>')}
+    `;
+    return;
+  }
+  const h = HEADERS[STATE.screen] || {title:''};
+  const envClass = h.env === 'Production' ? 'pill warn' : 'pill';
+  document.getElementById('header').innerHTML = `
+    <div class="header-left">
+      <h1 class="page-title">${h.title}</h1>
+      ${h.project ? `<span class="pill">${h.project}</span>` : ''}
+      ${h.env ? `<span class="${envClass}">${h.env}</span>` : ''}
+    </div>
+    ${headerRightHTML(h.action ? `<button class="btn btn-primary" onclick="${h.action.onclick}">${ICONS[h.action.icon]||''}${h.action.label}</button>` : '')}
+  `;
+}
+
+function showApp(){
+  document.querySelector('.app-shell').style.display = 'flex';
+  document.getElementById('auth-root').style.display = 'none';
+}
+
+function navigate(screen){
+  if (screen === 'login' || screen === 'signup') { renderAuth(screen); return; }
+  showApp();
+  STATE.screen = screen;
+  STATE.activeNav = screen;
+  renderSidebar();
+  renderHeader();
+  loadWithSkeleton();
+}
+
+function logout(){
+  STATE.newAccount = false;
+  renderAuth('login');
+}
+
+function openProject(name){
+  showApp();
+  STATE.currentProject = name;
+  STATE.screen = 'project';
+  STATE.activeNav = 'projects';
+  STATE.projectTab = 'overview';
+  renderSidebar();
+  renderHeader();
+  loadWithSkeleton();
+}
+
+function setProjectTab(tab){
+  STATE.projectTab = tab;
+  loadWithSkeleton();
+}
+
+function selectSource(i){ STATE.selectedSource = i; renderContent(); }
+
+/* ---------------- SCREENS ---------------- */
+
+function screenDashboard(){
+  if (STATE.newAccount) {
+    return `
+    <div class="card" style="max-width:520px;margin:40px auto;">
+      <div class="empty-state" style="padding:32px 16px;">
+        <div class="title" style="font-size:16px;">Create your first project</div>
+        <div style="margin-bottom:20px;">Add a project and testing environment to start running audits.</div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button class="btn btn-primary" onclick="openCreateProject()">${ICONS.plus}Create Project</button>
+          <button class="btn btn-secondary" onclick="toast('Opens the setup guide in a new tab.')">View Setup Guide</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  return `
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Project Status</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <span style="color:var(--color-text-secondary);font-size:12px;">Last audit finished <span class="mono">2h 14m</span> ago</span>
+        <span class="badge" style="background:var(--color-warning-subtle);color:var(--color-warning-subtle-text);">Ready with Warnings</span>
+      </div>
+      <div class="stat-grid">
+        <div class="stat critical"><span class="num mono" data-countup="3">0</span><span class="label">Critical</span></div>
+        <div class="stat high"><span class="num mono" data-countup="8">0</span><span class="label">High</span></div>
+        <div class="stat"><span class="num mono" data-countup="142">0</span><span class="label">Passed Checks</span></div>
+        <div class="stat"><span class="num mono" data-countup="6">0</span><span class="label">Review Required</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Running Audits <a class="link" onclick="navigate('live-audit')">View All</a></div>
+      <div class="list-row">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:7px;"><span class="status-dot live"></span><span style="font-weight:500;">Acme Corp Website — QA</span></div>
+          <div class="mono" style="color:var(--color-text-secondary);font-size:12px;margin:4px 0 8px;">Content Validation · 6m 12s elapsed</div>
+          <div class="progress-track"><div class="progress-fill" data-target-width="72" style="width:0%"></div></div>
+        </div>
+        <span class="mono" style="font-size:15px;font-weight:600;">72%</span>
+      </div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Critical Findings <a class="link" onclick="navigate('findings')">View All</a></div>
+      <div class="list-row" style="gap:10px;"><span class="severity-bar critical"></span><span class="badge badge-critical">Critical</span><span style="flex:1;font-weight:500;">Missing CTA button</span><span style="color:var(--color-text-secondary);font-size:12px;">Homepage · UI Validation</span></div>
+      <div class="list-row" style="gap:10px;"><span class="severity-bar high"></span><span class="badge badge-high">High</span><span style="flex:1;font-weight:500;">Contrast ratio below AA</span><span style="color:var(--color-text-secondary);font-size:12px;">Pricing · Accessibility</span></div>
+      <div class="list-row" style="gap:10px;"><span class="severity-bar critical"></span><span class="badge badge-critical">Critical</span><span style="flex:1;font-weight:500;">Checkout form fails validation</span><span style="color:var(--color-text-secondary);font-size:12px;">Checkout · Functional</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Quick Actions</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div class="quick-action" onclick="openCreateProject()">${ICONS.plus}Create Project</div>
+        <div class="quick-action" onclick="navigate('run-audit')">${ICONS.play}Run Audit</div>
+        <div class="quick-action" onclick="openFigmaModal()">${ICONS.figma}Connect Figma</div>
+        <div class="quick-action" onclick="navigate('reports')">${ICONS.reports}Open Latest Report</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Recent Runs <a class="link" onclick="navigate('history')">View All Runs</a></div>
+    <table>
+      <thead><tr><th>Run ID</th><th>Project</th><th>Environment</th><th>Status</th><th>Started</th><th>Findings</th></tr></thead>
+      <tbody>
+        <tr class="clickable" onclick="navigate('live-audit')"><td class="mono">#1042</td><td>Acme Corp Website</td><td>QA</td><td><span class="status-chip status-running">Running</span></td><td style="color:var(--color-text-secondary);">6 min ago</td><td class="mono">11</td></tr>
+        <tr class="clickable" onclick="navigate('audit-summary')"><td class="mono">#1041</td><td>Acme Corp Website</td><td>Staging</td><td><span class="status-chip status-completed">Completed</span></td><td style="color:var(--color-text-secondary);">Yesterday</td><td class="mono">4</td></tr>
+        <tr class="clickable"><td class="mono">#1040</td><td>Northwind Portal</td><td>Production</td><td><span class="status-chip status-failed">Failed</span></td><td style="color:var(--color-text-secondary);">2 days ago</td><td class="mono">0</td></tr>
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function screenProjects(){
+  const rows = [
+    ['Acme Corp Website','QA','2h ago','Ready with Warnings','Yesterday','5','J. Reyes'],
+    ['Northwind Portal','Production','2d ago','Not Ready','2 days ago','8','J. Reyes'],
+    ['Fenwick Docs','Staging','5d ago','Ready','5 days ago','6','A. Suri'],
+  ];
+  const statusClass = s => s==='Ready'?'status-completed':s==='Not Ready'?'status-failed':'status-running';
+  return `
+  <div class="card">
+    <div style="display:flex;gap:10px;margin-bottom:16px;">
+      <input type="text" placeholder="Search projects" style="flex:1;border:1px solid var(--color-border-default);border-radius:6px;padding:9px 12px;font-family:inherit;font-size:13px;">
+      <button class="btn btn-secondary">Filter</button>
+      <button class="btn btn-secondary">Sort</button>
+    </div>
+    <table>
+      <thead><tr><th>Project Name</th><th>Environment</th><th>Last Audit</th><th>Status</th><th>Last Report</th><th>Engines</th><th>Owner</th></tr></thead>
+      <tbody>
+        ${rows.map(r=>`<tr class="clickable" onclick="openProject('${r[0]}')">
+          <td style="font-weight:500;">${r[0]}</td><td>${r[1]}</td><td style="color:var(--color-text-secondary);">${r[2]}</td>
+          <td><span class="status-chip ${statusClass(r[3])}">${r[3]}</span></td><td style="color:var(--color-text-secondary);">${r[4]}</td>
+          <td class="mono">${r[5]}</td><td>${r[6]}</td></tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function screenRunAudit(){
+  return `
+  <div class="card" style="max-width:640px;">
+    <div class="card-title">Audit Configuration</div>
+    <div style="display:flex;flex-direction:column;gap:18px;">
+      <div class="field"><label>Project</label><div class="detail-value" style="padding:10px 12px;background:var(--color-bg-surface-secondary);border-radius:6px;">Acme Corp Website (selected automatically)</div></div>
+      <div class="field"><label>Environment</label>
+        <select><option>QA</option><option>Development</option><option>UAT</option><option>Staging</option><option>Production</option></select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:500;color:var(--color-text-secondary);">Testing Types</label>
+        <div style="margin-top:8px;">
+          <div class="checkbox-row"><input type="checkbox" checked><div><div class="cb-title">UI Validation</div><div class="cb-desc">Compares rendered pages against expected layout and design.</div></div></div>
+          <div class="checkbox-row"><input type="checkbox" checked><div><div class="cb-title">Figma Comparison</div><div class="cb-desc">Compares live pages against the connected Figma design.</div></div></div>
+          <div class="checkbox-row"><input type="checkbox"><div><div class="cb-title">Content Validation</div><div class="cb-desc">Checks page content against source-of-truth requirements.</div></div></div>
+          <div class="checkbox-row"><input type="checkbox" checked><div><div class="cb-title">Grammar Check</div><div class="cb-desc">Checks website content for grammar and spelling issues.</div></div></div>
+          <div class="checkbox-row"><input type="checkbox"><div><div class="cb-title">Functional Testing</div><div class="cb-desc">Verifies core user flows behave as expected.</div></div></div>
+          <div class="checkbox-row"><input type="checkbox"><div><div class="cb-title">Accessibility Testing</div><div class="cb-desc">Checks WCAG compliance across tested pages.</div></div></div>
+        </div>
+      </div>
+      <div class="card" style="background:var(--color-bg-surface-secondary);border-style:dashed;">
+        <div class="card-title" style="margin-bottom:10px;">Summary</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;">
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Selected Tests</span><span>4 of 8</span></div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Estimated Duration</span><span class="mono">~12 min</span></div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Estimated Pages</span><span class="mono">24</span></div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Authentication</span><span class="badge badge-accepted">Verified</span></div>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="justify-content:center;" onclick="navigate('live-audit')">${ICONS.play}Run Audit</button>
+    </div>
+  </div>`;
+}
+
+function screenLiveAudit(){
+  const engines = [
+    {name:'Discovery', status:'Completed'},
+    {name:'UI Validation', status:'Completed'},
+    {name:'Content Validation', status:'Running'},
+    {name:'Grammar Check', status:'Waiting'},
+    {name:'Report Generation', status:'Waiting'},
+  ];
+  const chip = s => s==='Completed'?'status-completed':s==='Running'?'status-running':'status-queued';
+  return `
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div style="display:flex;gap:20px;font-size:13px;">
+        <div><span style="color:var(--color-text-secondary);">Run</span> <span class="mono" style="font-weight:600;">#1042</span></div>
+        <div><span style="color:var(--color-text-secondary);">Started</span> 6 min ago</div>
+        <div><span style="color:var(--color-text-secondary);">Elapsed</span> <span class="mono">00:06:12</span></div>
+      </div>
+      <button class="btn btn-outline" onclick="openConfirm({title:'Cancel Audit?', message:'Are you sure you want to stop this audit? Progress on the current run will be lost.', confirmLabel:'Cancel Audit', danger:true, onConfirm:()=>navigate('dashboard')})">Cancel Audit</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Overall Progress</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+      <span class="mono" style="font-size:26px;font-weight:600;">72%</span>
+      <span style="color:var(--color-text-secondary);font-size:12px;">Content Validation · ~5 min remaining</span>
+    </div>
+    <div class="progress-track lg"><div class="progress-fill" data-target-width="72" style="width:0%"></div></div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Engine Progress</div>
+      ${engines.map(e=>`<div class="list-row"><span>${e.name}</span><span class="status-chip ${chip(e.status)}">${e.status}</span></div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-title">Current Activity</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;"><span class="status-dot live"></span><span class="mono" style="font-size:13px;">Comparing homepage with Figma...</span></div>
+      <div class="card-title" style="margin-bottom:8px;font-size:12px;">Audit Log</div>
+      <div class="mono" style="font-size:11.5px;color:var(--color-text-secondary);display:flex;flex-direction:column;gap:6px;">
+        <div>00:00 — Audit Started</div>
+        <div>00:42 — Crawler Completed</div>
+        <div>01:05 — Figma Connected</div>
+        <div>02:14 — Content Comparison Started</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Live Findings</div>
+    <div class="list-row" style="gap:10px;"><span class="severity-bar critical"></span><span class="badge badge-critical">Critical</span><span style="flex:1;font-weight:500;">Missing CTA button</span><span style="color:var(--color-text-secondary);font-size:12px;">Homepage</span><span class="mono" style="font-size:12px;">99%</span></div>
+    <div class="list-row" style="gap:10px;"><span class="severity-bar medium"></span><span class="badge badge-medium">Medium</span><span style="flex:1;font-weight:500;">Inconsistent button spacing</span><span style="color:var(--color-text-secondary);font-size:12px;">Pricing</span><span class="mono" style="font-size:12px;">87%</span></div>
+  </div>
+  <button class="btn btn-secondary" style="align-self:flex-start;" onclick="navigate('audit-summary')">Skip to Completion (demo) →</button>
+  `;
+}
+
+function screenAuditSummary(){
+  return `
+  <div class="card" style="max-width:640px;">
+    <div style="text-align:center;padding:8px 0 20px;">
+      <div class="badge badge-accepted" style="font-size:13px;padding:6px 14px;">Audit Complete</div>
+      <div style="font-size:13px;color:var(--color-text-secondary);margin-top:10px;">Acme Corp Website · QA · Duration <span class="mono">14m 32s</span></div>
+    </div>
+    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
+      <div class="stat critical"><span class="num mono" data-countup="3">0</span><span class="label">Critical</span></div>
+      <div class="stat high"><span class="num mono" data-countup="8">0</span><span class="label">High</span></div>
+      <div class="stat"><span class="num mono" data-countup="14">0</span><span class="label">Medium</span></div>
+      <div class="stat"><span class="num mono" data-countup="6">0</span><span class="label">Low</span></div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="navigate('findings')">View Findings</button>
+      <button class="btn btn-secondary" style="flex:1;justify-content:center;" onclick="navigate('reports')">Open Report</button>
+      <button class="btn btn-outline" style="flex:1;justify-content:center;" onclick="navigate('run-audit')">Run Again</button>
+    </div>
+  </div>`;
+}
+
+let FINDINGS = [
+  {sev:'critical', title:'Missing CTA button', page:'Homepage', engine:'UI Validation', conf:'99%', status:'New',
+   expected:'Primary CTA button should be visible below the hero section.',
+   actual:'Primary CTA button is missing from the homepage.',
+   impact:'Users may not be able to proceed to the primary conversion flow, reducing usability and conversion rate.',
+   resolution:'Verify that the CTA component is rendered correctly and matches the approved design.'},
+  {sev:'high', title:'Contrast ratio below AA', page:'Pricing', engine:'Accessibility', conf:'94%', status:'New',
+   expected:'Body text should maintain a contrast ratio of at least 4.5:1 against its background.',
+   actual:'Secondary text on the pricing cards renders at a 3.1:1 contrast ratio.',
+   impact:'Users with low vision may be unable to read pricing details, risking lost conversions and an accessibility compliance gap.',
+   resolution:'Darken the secondary text color token or lighten the card background to restore AA contrast.'},
+  {sev:'critical', title:'Checkout form fails validation', page:'Checkout', engine:'Functional Testing', conf:'97%', status:'Reviewed',
+   expected:'Submitting the checkout form with valid data should proceed to confirmation.',
+   actual:'Form submission throws a silent error and the page does not advance.',
+   impact:'Customers are fully blocked from completing purchases on this environment.',
+   resolution:'Check the checkout API integration — likely a schema mismatch on the payment payload.'},
+  {sev:'medium', title:'Inconsistent button spacing', page:'Pricing', engine:'UI Validation', conf:'87%', status:'New',
+   expected:'Buttons should use the standard 16px horizontal padding token.',
+   actual:'Plan comparison buttons use 12px padding, inconsistent with the design system.',
+   impact:'Minor visual inconsistency; unlikely to affect usability but breaks design system compliance.',
+   resolution:'Update the button component instance to use the standard padding token.'},
+];
+
+const EVIDENCE_CONTENT = {
+  Screenshot: `<div style="background:var(--color-bg-surface-secondary);border:1px solid var(--color-border-default);border-radius:8px;height:160px;display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);font-size:12px;">Screenshot preview</div>`,
+  DOM: `<div class="evidence-box">&lt;section class="hero"&gt;\n  &lt;h1&gt;Build faster, ship safer&lt;/h1&gt;\n  &lt;!-- expected: &lt;button class="cta"&gt; --&gt;\n&lt;/section&gt;</div>`,
+  HTML: `<div class="evidence-box">&lt;div class="hero-content"&gt;\n  &lt;h1&gt;Build faster, ship safer&lt;/h1&gt;\n  &lt;p&gt;Automated QA for modern teams&lt;/p&gt;\n&lt;/div&gt;</div>`,
+  CSS: `<div class="evidence-box">.cta {\n  display: none; /* ← unexpected */\n  background: var(--color-accent-default);\n}</div>`,
+  Console: `<div class="evidence-box">[warn] Button component "cta-primary" not found in DOM\n[info] Hero section rendered in 812ms</div>`,
+};
+
+function screenFindings(){
+  const f = FINDINGS[STATE.selectedFinding] || FINDINGS[0];
+  const sevBadge = s => `badge-${s}`;
+  return `
+  <div class="findings-layout">
+    <div style="display:flex;flex-direction:column;gap:10px;min-width:0;">
+      ${STATE.selectedFindings.size > 0 ? bulkBarHTML() : ''}
+      <div class="findings-list">
+        ${FINDINGS.map((item,i)=>`
+          <div class="finding-card ${i===STATE.selectedFinding?'selected':''}" onclick="selectFinding(${i})">
+            <input type="checkbox" class="finding-checkbox" ${STATE.selectedFindings.has(i)?'checked':''} onclick="event.stopPropagation(); toggleFindingSelect(${i})">
+            <span class="severity-bar ${item.sev}"></span>
+            <div style="flex:1;">
+              <div class="ftitle">${item.title}</div>
+              <div class="fmeta">${item.page} · ${item.engine} · <span class="mono" data-tooltip="DOM validation · Screenshot validation · CSS validation">${item.conf}</span></div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="card" style="overflow-y:auto;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+        <span class="badge ${sevBadge(f.sev)}">${f.sev.charAt(0).toUpperCase()+f.sev.slice(1)}</span>
+        <span class="section-title" style="margin:0;">${f.title}</span>
+        <span class="badge" style="margin-left:auto;background:var(--color-bg-surface-secondary);color:var(--color-text-secondary);">${f.status}</span>
+      </div>
+      <div class="detail-section">
+        <div class="detail-label">Overview</div>
+        <div class="detail-value" style="display:flex;gap:24px;color:var(--color-text-secondary);font-size:12.5px;">
+          <span>Page: <span style="color:var(--color-text-primary);">${f.page}</span></span>
+          <span>Engine: <span style="color:var(--color-text-primary);">${f.engine}</span></span>
+          <span>Confidence: <span class="mono" data-tooltip="DOM validation · Screenshot validation · CSS validation" style="color:var(--color-text-primary);">${f.conf}</span></span>
+          <span>Status: <span style="color:var(--color-text-primary);">${f.status}</span></span>
+        </div>
+      </div>
+      <div class="detail-section"><div class="detail-label">Expected Result</div><div class="detail-value">${f.expected}</div></div>
+      <div class="detail-section"><div class="detail-label">Actual Result</div><div class="detail-value">${f.actual}</div></div>
+      <div class="detail-section"><div class="detail-label">Business Impact</div><div class="detail-value">${f.impact}</div></div>
+      <div class="detail-section"><div class="detail-label">Suggested Resolution</div><div class="detail-value">${f.resolution}</div></div>
+      <div class="detail-section">
+        <div class="detail-label">Evidence</div>
+        <div class="tabs" style="margin-bottom:10px;">
+          ${['Screenshot','DOM','HTML','CSS','Console'].map(t=>`<div class="tab ${STATE.evidenceTab===t?'active':''}" onclick="setEvidenceTab('${t}')">${t}</div>`).join('')}
+        </div>
+        ${EVIDENCE_CONTENT[STATE.evidenceTab]}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn btn-secondary" onclick="setFindingStatus(${STATE.selectedFinding},'Accepted')">Accept</button>
+        <button class="btn btn-secondary" onclick="setFindingStatus(${STATE.selectedFinding},'Rejected')">Reject</button>
+        <button class="btn btn-outline" onclick="setFindingStatus(${STATE.selectedFinding},'Ignored')">Ignore</button>
+      </div>
+    </div>
+  </div>`;
+}
+function selectFinding(i){ STATE.selectedFinding = i; STATE.evidenceTab = 'Screenshot'; renderContent(); }
+function setEvidenceTab(tab){ STATE.evidenceTab = tab; renderContent(); }
+function setFindingStatus(i, status){
+  if (FINDINGS[i]) FINDINGS[i].status = status;
+  toast(`Finding marked as ${status}.`, 'success');
+  renderContent();
+}
+function toggleFindingSelect(i){
+  if (STATE.selectedFindings.has(i)) STATE.selectedFindings.delete(i); else STATE.selectedFindings.add(i);
+  renderContent();
+}
+function bulkBarHTML(){
+  const n = STATE.selectedFindings.size;
+  return `<div class="bulk-bar">
+    <span>${n} selected</span>
+    <div style="display:flex;gap:6px;">
+      <button class="btn btn-secondary" onclick="bulkSetStatus('Accepted')">Accept</button>
+      <button class="btn btn-secondary" onclick="bulkSetStatus('Rejected')">Reject</button>
+      <button class="btn btn-secondary" onclick="bulkSetStatus('Ignored')">Ignore</button>
+      <button class="btn btn-secondary" onclick="toast(STATE.selectedFindings.size + ' findings exported.', 'success')">Export</button>
+      <button class="btn btn-danger" onclick="bulkDeleteFindings()">Delete</button>
+    </div>
+  </div>`;
+}
+function bulkSetStatus(status){
+  STATE.selectedFindings.forEach(i => { if (FINDINGS[i]) FINDINGS[i].status = status; });
+  toast(`${STATE.selectedFindings.size} findings marked as ${status}.`, 'success');
+  STATE.selectedFindings.clear();
+  renderContent();
+}
+function bulkDeleteFindings(){
+  const n = STATE.selectedFindings.size;
+  openConfirm({ title:'Delete Findings', message:`Delete ${n} selected finding(s)? This cannot be undone.`, confirmLabel:'Delete', danger:true, onConfirm:() => {
+    FINDINGS = FINDINGS.filter((_,i) => !STATE.selectedFindings.has(i));
+    STATE.selectedFindings.clear();
+    STATE.selectedFinding = 0;
+    toast(`${n} findings deleted.`, 'success');
+    renderContent();
+  }});
+}
+
+function screenReports(){
+  const tabs = [['developer','Developer Report'],['management','Management Report'],['executive','Executive Summary']];
+  return `
+  <div class="tabs">
+    ${tabs.map(([id,label])=>`<div class="tab ${STATE.reportTab===id?'active':''}" onclick="setReportTab('${id}')">${label}</div>`).join('')}
+  </div>
+  <div class="card">
+    ${STATE.reportTab==='developer' ? `
+      <div class="card-title">Developer Report — Acme Corp Website</div>
+      <div class="detail-label">Severity Distribution</div>
+      <div class="stat-grid" style="margin-bottom:20px;">
+        <div class="stat critical"><span class="num mono" data-countup="3">0</span><span class="label">Critical</span></div>
+        <div class="stat high"><span class="num mono" data-countup="8">0</span><span class="label">High</span></div>
+        <div class="stat"><span class="num mono" data-countup="14">0</span><span class="label">Medium</span></div>
+        <div class="stat"><span class="num mono" data-countup="6">0</span><span class="label">Low</span></div>
+      </div>
+      <div class="detail-label">Findings</div>
+      ${FINDINGS.map(f=>`<div class="list-row" style="gap:10px;"><span class="severity-bar ${f.sev}"></span><span class="badge badge-${f.sev}">${f.sev}</span><span style="flex:1;">${f.title}</span><span style="color:var(--color-text-secondary);font-size:12px;">${f.page}</span></div>`).join('')}
+    ` : STATE.reportTab==='management' ? `
+      <div class="card-title">Management Report</div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Project</span><span>Acme Corp Website</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Environment</span><span>QA</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Duration</span><span class="mono">14m 32s</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Critical Issues</span><span class="mono" style="color:var(--color-error-default);">3</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">High Issues</span><span class="mono" style="color:var(--color-warning-default);">8</span></div>
+        <div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid var(--color-border-default);"><span style="color:var(--color-text-secondary);">Release Recommendation</span><span class="badge badge-high">Not Recommended</span></div>
+      </div>
+    ` : `
+      <div class="card-title">Executive Summary</div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Overall Status</span><span class="badge" style="background:var(--color-warning-subtle);color:var(--color-warning-subtle-text);">Needs Attention</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Pages Tested</span><span class="mono">24</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Major Risks</span><span>Checkout flow blocked for all users</span></div>
+        <div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid var(--color-border-default);"><span style="color:var(--color-text-secondary);">Recommendation</span><span>Hold release until checkout is fixed</span></div>
+      </div>
+    `}
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button class="btn btn-secondary">Download PDF</button>
+      <button class="btn btn-secondary">Export HTML</button>
+      <button class="btn btn-outline">Print</button>
+    </div>
+  </div>`;
+}
+function setReportTab(id){ STATE.reportTab = id; renderContent(); }
+
+function screenHistory(){
+  const rows = [
+    ['#1042','Acme Corp Website','QA','Running','6 min ago','—','11'],
+    ['#1041','Acme Corp Website','Staging','Completed','Yesterday','14m 32s','4'],
+    ['#1040','Northwind Portal','Production','Failed','2 days ago','2m 10s','0'],
+    ['#1039','Fenwick Docs','Staging','Completed','5 days ago','9m 44s','2'],
+  ];
+  const chip = s => s==='Completed'?'status-completed':s==='Running'?'status-running':'status-failed';
+  return `<div class="card"><table>
+    <thead><tr><th>Run ID</th><th>Project</th><th>Environment</th><th>Status</th><th>Date</th><th>Duration</th><th>Findings</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr class="clickable" onclick="navigate('${r[3]==='Running'?'live-audit':'audit-summary'}')">
+      <td class="mono">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td><span class="status-chip ${chip(r[3])}">${r[3]}</span></td>
+      <td style="color:var(--color-text-secondary);">${r[4]}</td><td class="mono">${r[5]}</td><td class="mono">${r[6]}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+function screenSettings(){
+  return `
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">General</div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="field"><label>Display Name</label><input type="text" value="Mushtaq Ahmed"></div>
+        <div class="field"><label>Default Project</label><select><option>Acme Corp Website</option><option>Northwind Portal</option></select></div>
+        <div class="field"><label>Default Environment</label><select><option>QA</option><option>Staging</option><option>Production</option></select></div>
+        <div class="field"><label>Theme</label><select><option>Light</option><option>Dark</option></select></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">AI Settings</div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Active Provider</span><span>Anthropic</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Connection Status</span><span class="badge badge-accepted">Connected</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">API Key Status</span><span class="badge badge-accepted">Valid</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Default Model</span><span class="mono">claude-sonnet-5</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="max-width:100%;">
+    <div class="card-title">Engine Settings</div>
+    <div class="grid-2">
+      <div class="field"><label>Screenshot Quality</label><select><option>High</option><option>Medium</option></select></div>
+      <div class="field"><label>Default Timeout</label><input type="text" value="30s"></div>
+      <div class="field"><label>Retry Count</label><input type="text" value="2"></div>
+      <div class="field"><label>Default Viewport</label><select><option>Desktop (1440×900)</option><option>Tablet</option></select></div>
+    </div>
+  </div>`;
+}
+
+let ADMIN_USERS = [
+  ['Mushtaq Ahmed','mushtaq@tentwenty.me','Administrator','Active','Now'],
+  ['Anika Suri','anika@tentwenty.me','QA Lead','Active','3h ago'],
+  ['Jordan Reyes','jordan@tentwenty.me','QA Engineer','Active','Yesterday'],
+  ['Sam Patel','sam@tentwenty.me','Viewer','Disabled','2 weeks ago'],
+];
+
+function screenAdmin(){
+  return `<div class="card"><table>
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Active</th><th>Actions</th></tr></thead>
+    <tbody>${ADMIN_USERS.map((u,i)=>`<tr>
+      <td style="font-weight:500;">${u[0]}</td><td style="color:var(--color-text-secondary);">${u[1]}</td><td>${u[2]}</td>
+      <td><span class="status-chip ${u[3]==='Active'?'status-completed':'status-queued'}">${u[3]}</span></td>
+      <td style="color:var(--color-text-secondary);">${u[4]}</td>
+      <td><a class="link" onclick="toast('Opens edit panel for ' + '${u[0]}')">Edit</a> &nbsp; <a class="link" onclick="ADMIN_USERS[${i}][3]=ADMIN_USERS[${i}][3]==='Active'?'Disabled':'Active'; renderContent();">${u[3]==='Active'?'Disable':'Enable'}</a> &nbsp;
+      <a class="link" style="color:var(--color-error-default);" onclick="openConfirm({title:'Remove User', message:'Remove ${u[0]} from this organization? They will immediately lose access.', confirmLabel:'Remove User', danger:true, onConfirm:()=>{ADMIN_USERS.splice(${i},1); renderContent();}})">Delete</a></td>
+      </tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+/* ---------------- PROJECT WORKSPACE ---------------- */
+
+const PROJECT_TABS = [
+  ['overview','Overview'], ['knowledge','Knowledge'], ['environments','Environments'],
+  ['testing','Testing'], ['reports','Reports'], ['history','History'], ['settings','Settings'],
+];
+
+let KNOWLEDGE_SOURCES = [
+  {name:'Requirements.pdf', type:'Requirements Document', icon:'doc', uploadedBy:'J. Reyes', date:'3 days ago', status:'Processed'},
+  {name:'Checkout_Test_Cases.xlsx', type:'Test Cases', icon:'checklist', uploadedBy:'A. Suri', date:'Yesterday', status:'Processed'},
+  {name:'Acceptance_Criteria.docx', type:'Acceptance Criteria', icon:'doc', uploadedBy:'J. Reyes', date:'4 days ago', status:'Processed'},
+  {name:'Content_Sheet_Homepage.csv', type:'Content Sheet', icon:'sheet', uploadedBy:'J. Reyes', date:'5 days ago', status:'Processing'},
+  {name:'Homepage.fig', type:'Figma Design', icon:'figma', uploadedBy:'A. Suri', date:'1 week ago', status:'Processed'},
+];
+
+function screenProject(){
+  return `
+    <div class="project-tabs">
+      ${PROJECT_TABS.map(([id,label])=>`<div class="project-tab ${STATE.projectTab===id?'active':''}" onclick="setProjectTab('${id}')">${label}</div>`).join('')}
+    </div>
+    <div id="project-tab-content" style="display:flex;flex-direction:column;gap:20px;">
+      ${renderProjectTab()}
+    </div>`;
+}
+
+function renderProjectTab(){
+  switch(STATE.projectTab){
+    case 'knowledge': return projectTabKnowledge();
+    case 'environments': return projectTabEnvironments();
+    case 'testing': return projectTabTesting();
+    case 'reports': return projectTabReports();
+    case 'history': return projectTabHistory();
+    case 'settings': return projectTabSettings();
+    default: return projectTabOverview();
+  }
+}
+
+function projectTabOverview(){
+  return `
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Project Summary</div>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Environments</span><span class="mono">4</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Latest Audit</span><span>2h ago</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Total Findings</span><span class="mono">31</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Critical Findings</span><span class="mono" style="color:var(--color-error-default);">3</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Last Report</span><span>Yesterday</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Latest Audit</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span class="badge" style="background:var(--color-warning-subtle);color:var(--color-warning-subtle-text);">Ready with Warnings</span>
+        <span class="mono" style="font-size:12px;color:var(--color-text-secondary);">14m 32s</span>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="navigate('audit-summary')" style="flex:1;justify-content:center;">Open Audit</button>
+        <button class="btn btn-secondary" onclick="navigate('reports')" style="flex:1;justify-content:center;">Open Report</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Recent Findings <a class="link" onclick="navigate('findings')">View All</a></div>
+    <div class="list-row" style="gap:10px;"><span class="severity-bar critical"></span><span class="badge badge-critical">Critical</span><span style="flex:1;font-weight:500;">Missing CTA button</span><span style="color:var(--color-text-secondary);font-size:12px;">UI Validation</span></div>
+    <div class="list-row" style="gap:10px;"><span class="severity-bar high"></span><span class="badge badge-high">High</span><span style="flex:1;font-weight:500;">Contrast ratio below AA</span><span style="color:var(--color-text-secondary);font-size:12px;">Accessibility</span></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Project Activity</div>
+    <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
+      <div style="display:flex;justify-content:space-between;"><span>Audit Completed</span><span style="color:var(--color-text-secondary);">2h ago</span></div>
+      <div style="display:flex;justify-content:space-between;"><span>Report Generated</span><span style="color:var(--color-text-secondary);">2h ago</span></div>
+      <div style="display:flex;justify-content:space-between;"><span>Requirements Uploaded</span><span style="color:var(--color-text-secondary);">3d ago</span></div>
+      <div style="display:flex;justify-content:space-between;"><span>Environment Added</span><span style="color:var(--color-text-secondary);">1w ago</span></div>
+    </div>
+  </div>`;
+}
+
+function projectTabKnowledge(){
+  const s = KNOWLEDGE_SOURCES[STATE.selectedSource];
+  return `
+  <div class="knowledge-layout">
+    <div>
+      ${KNOWLEDGE_SOURCES.map((src,i)=>`
+        <div class="source-row ${i===STATE.selectedSource?'selected':''}" onclick="selectSource(${i})">
+          <div class="source-icon">${ICONS[src.icon]}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="source-name">${src.name}</div>
+            <div class="source-meta">${src.type} · ${src.status}</div>
+          </div>
+        </div>`).join('')}
+      <div class="upload-dropzone" style="margin-top:12px;">
+        <div style="font-weight:500;color:var(--color-text-primary);margin-bottom:6px;">Add Knowledge Source</div>
+        <div style="margin-bottom:10px;">Requirements, BRD/PRD, acceptance criteria, <strong>test cases</strong>, business rules, content sheets, or a Figma design.</div>
+        <div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px;">
+          <button class="btn btn-primary" onclick="openUploadModal('file')">Upload File</button>
+          <button class="btn btn-secondary" onclick="openUploadModal('text')">Paste Text</button>
+        </div>
+        <div>
+          ${['PDF','DOCX','XLSX','CSV','TXT','Markdown'].map(t=>`<span class="filetype-badge">${t}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">${s.name}</div>
+      <div style="display:flex;gap:20px;font-size:12px;color:var(--color-text-secondary);margin-bottom:18px;">
+        <span>Type: <span style="color:var(--color-text-primary);">${s.type}</span></span>
+        <span>Uploaded by: <span style="color:var(--color-text-primary);">${s.uploadedBy}</span></span>
+        <span>Date: <span style="color:var(--color-text-primary);">${s.date}</span></span>
+        <span>Status: <span class="badge ${s.status==='Processed'?'badge-accepted':'badge-medium'}">${s.status}</span></span>
+      </div>
+      <div class="card-title" style="font-size:12px;">AI Understanding — built from all uploaded sources</div>
+      <div class="ai-understanding-row"><div class="k-label">Project Purpose</div><div class="detail-value">Marketing + e-commerce site for Acme Corp, covering homepage, pricing, and checkout.</div></div>
+      <div class="ai-understanding-row"><div class="k-label">Key User Flows</div><div class="detail-value">Browse products → add to cart → checkout → order confirmation.</div></div>
+      <div class="ai-understanding-row"><div class="k-label">Business Rules</div><div class="detail-value">Discount codes apply only to non-sale items; checkout requires verified email.</div></div>
+      <div class="ai-understanding-row"><div class="k-label">Testing Scope</div><div class="detail-value">Checkout form validation is derived directly from Checkout_Test_Cases.xlsx.</div></div>
+      <div class="ai-understanding-row"><div class="k-label">Known Constraints</div><div class="detail-value">Legacy /admin routes are intentionally excluded from crawling.</div></div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-secondary" onclick="toast('Opening ' + '${s.name}' + '...')">View</button>
+        <button class="btn btn-secondary" onclick="openUploadModal('file')">Replace</button>
+        <button class="btn btn-outline" onclick="openConfirm({title:'Delete Source', message:'Delete \'${s.name}\'? Anything the AI learned from it will be removed from this project\u2019s knowledge base.', confirmLabel:'Delete Source', danger:true, onConfirm:()=>{KNOWLEDGE_SOURCES.splice(STATE.selectedSource,1); STATE.selectedSource=0; renderContent();}})">Delete</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+let ENVIRONMENTS = [
+  {name:'Development', url:'dev.acmecorp.com', status:'Online', auth:'Verified'},
+  {name:'QA', url:'qa.acmecorp.com', status:'Online', auth:'Verified'},
+  {name:'Staging', url:'staging.acmecorp.com', status:'Online', auth:'Verified'},
+  {name:'Production', url:'acmecorp.com', status:'Online', auth:'Verified'},
+];
+
+function projectTabEnvironments(){
+  return `
+  <div style="display:flex;justify-content:flex-end;">
+    <button class="btn btn-secondary" onclick="openEnvModal()">${ICONS.plus}Add Environment</button>
+  </div>
+  <div class="env-grid">
+    ${ENVIRONMENTS.map((e,i)=>`
+      <div class="env-card">
+        <div class="env-name">${e.name}</div>
+        <div class="env-url">${e.url}</div>
+        <div style="display:flex;gap:8px;">
+          <span class="badge badge-accepted">${e.status}</span>
+          <span class="badge badge-accepted">Auth ${e.auth}</span>
+        </div>
+        <div class="env-actions">
+          <button class="btn btn-secondary" style="flex:1;justify-content:center;" onclick="toast('Opens edit panel for ' + '${e.name}')">Edit</button>
+          <button class="btn btn-secondary" style="flex:1;justify-content:center;" onclick="toast('Connection to ' + '${e.url}' + ' verified.', 'success')">Test Connection</button>
+          <button class="btn btn-outline" onclick="openConfirm({title:'Delete Environment', message:'Delete the ${e.name} environment? Any audits configured against it will need to be reassigned.', confirmLabel:'Delete Environment', danger:true, onConfirm:()=>{ENVIRONMENTS.splice(${i},1); renderContent();}})">Delete</button>
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+
+function projectTabTesting(){
+  return `
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">General</div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="field"><label>Default Browser</label><select><option>Chromium</option><option>Firefox</option><option>WebKit</option></select></div>
+        <div class="field"><label>Viewport</label><select><option>Desktop (1440×900)</option><option>Tablet (768×1024)</option></select></div>
+        <div class="field"><label>Timeout</label><input type="text" value="30s"></div>
+        <div class="field"><label>Retry Count</label><input type="text" value="2"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Enabled Engines</div>
+      <div class="checkbox-row"><input type="checkbox" checked><div class="cb-title">UI Validation</div></div>
+      <div class="checkbox-row"><input type="checkbox" checked><div class="cb-title">Figma Comparison</div></div>
+      <div class="checkbox-row"><input type="checkbox"><div class="cb-title">Content Validation</div></div>
+      <div class="checkbox-row"><input type="checkbox" checked><div class="cb-title">Grammar Check</div></div>
+      <div class="checkbox-row"><input type="checkbox"><div class="cb-title">Functional Testing</div></div>
+      <div class="checkbox-row"><input type="checkbox"><div class="cb-title">Accessibility Testing</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Ignore Rules</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <input type="text" placeholder="e.g. /admin, .cookie-banner" style="flex:1;border:1px solid var(--color-border-default);border-radius:6px;padding:9px 12px;font-family:inherit;font-size:13px;">
+      <button class="btn btn-secondary">Add Rule</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <span class="filetype-badge">/admin</span><span class="filetype-badge">Cookie Banner</span>
+      <span class="filetype-badge">Chat Widget</span><span class="filetype-badge">Dynamic Timestamp</span>
+    </div>
+  </div>`;
+}
+
+function projectTabReports(){
+  const reports = [
+    ['Developer Report — Run #1041','Yesterday','J. Reyes'],
+    ['Executive Summary — Run #1041','Yesterday','J. Reyes'],
+    ['Management Report — Run #1038','1 week ago','A. Suri'],
+  ];
+  return `<div class="card"><table>
+    <thead><tr><th>Report Name</th><th>Generated Date</th><th>Generated By</th><th>Actions</th></tr></thead>
+    <tbody>${reports.map(r=>`<tr><td style="font-weight:500;">${r[0]}</td><td style="color:var(--color-text-secondary);">${r[1]}</td><td>${r[2]}</td>
+      <td><a class="link" onclick="navigate('reports')">Open</a> &nbsp; <a class="link">Download</a></td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+function projectTabHistory(){ return screenHistory(); }
+
+function projectTabSettings(){
+  return `
+  <div class="card" style="max-width:640px;">
+    <div class="card-title">Project Settings</div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="field"><label>Project Name</label><input type="text" value="${STATE.currentProject}"></div>
+      <div class="field"><label>Description</label><textarea rows="2">Marketing + e-commerce site for Acme Corp.</textarea></div>
+      <div class="field"><label>Owner</label><select><option>J. Reyes</option><option>A. Suri</option></select></div>
+      <div class="field"><label>Default Environment</label><select><option>QA</option><option>Staging</option><option>Production</option></select></div>
+      <div class="field"><label>Primary Language</label><select><option>English</option><option>Spanish</option></select></div>
+      <div class="field"><label>Retention Policy</label><select><option>90 days</option><option>1 year</option><option>Forever</option></select></div>
+    </div>
+  </div>
+  <div class="card" style="max-width:640px;border-color:var(--color-error-subtle);">
+    <div class="card-title" style="color:var(--color-error-default);">Danger Zone</div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline" style="flex:1;justify-content:center;" onclick="openConfirm({title:'Archive Project', message:'Archive \'${STATE.currentProject}\'? It will be hidden from the main Projects list but all data is kept and it can be restored later.', confirmLabel:'Archive Project', onConfirm:()=>navigate('projects')})">Archive Project</button>
+      <button class="btn btn-danger" style="flex:1;justify-content:center;" onclick="openConfirm({title:'Delete Project', message:'This will permanently delete \'${STATE.currentProject}\' and all its audits, findings, reports, and knowledge sources. This cannot be undone.', confirmLabel:'Delete Project', danger:true, onConfirm:()=>navigate('projects')})">Delete Project</button>
+    </div>
+  </div>`;
+}
+
+/* ---------------- CREATE PROJECT MODAL ---------------- */
+
+function openCreateProject(){
+  STATE.createProject.open = true;
+  STATE.createProject.step = 1;
+  renderModal();
+}
+function closeCreateProject(){
+  STATE.createProject.open = false;
+  animatedClose('modal-root', renderModal);
+}
+function saveStepFields(){
+  const cp = STATE.createProject;
+  if (cp.step === 1) {
+    const nameEl = document.getElementById('cp-name');
+    const descEl = document.getElementById('cp-desc');
+    const clientEl = document.getElementById('cp-client');
+    if (nameEl) cp.name = nameEl.value;
+    if (descEl) cp.description = descEl.value;
+    if (clientEl) cp.client = clientEl.value;
+  }
+}
+function createProjectNext(){
+  saveStepFields();
+  if (STATE.createProject.step < 4) STATE.createProject.step++;
+  renderModal();
+}
+function createProjectBack(){
+  saveStepFields();
+  if (STATE.createProject.step > 1) STATE.createProject.step--;
+  renderModal();
+}
+function finishCreateProject(){
+  saveStepFields();
+  const name = STATE.createProject.name || 'New Project';
+  STATE.createProject.open = false;
+  renderModal();
+  openProject(name);
+}
+
+function modalStepBody(){
+  const cp = STATE.createProject;
+  if (cp.step === 1) {
+    return `
+      <div class="field"><label>Project Name *</label><input type="text" id="cp-name" value="${cp.name}" placeholder="e.g. Acme Corp Website"></div>
+      <div class="field"><label>Description</label><textarea id="cp-desc" rows="2" placeholder="What is this project?">${cp.description}</textarea></div>
+      <div class="field"><label>Client Name</label><input type="text" id="cp-client" value="${cp.client}" placeholder="e.g. Acme Corp"></div>
+      <div class="grid-2">
+        <div class="field"><label>Primary Language</label><select><option>English</option><option>Spanish</option></select></div>
+        <div class="field"><label>Time Zone</label><select><option>UTC (GMT+0)</option><option>PT (GMT-8)</option></select></div>
+      </div>`;
+  }
+  if (cp.step === 2) {
+    return `
+      <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:4px;">Add one or more environments. You can add more later from the project's Environments tab.</div>
+      ${cp.environments.map(e=>`<div class="list-row"><span style="font-weight:500;">${e}</span><span class="badge badge-accepted">Configured</span></div>`).join('')}
+      <button class="btn btn-secondary" style="align-self:flex-start;" onclick="openEnvModal()">${ICONS.plus}Add Environment</button>`;
+  }
+  if (cp.step === 3) {
+    return `
+      <div class="field"><label>Authentication Method</label>
+        <select id="cp-auth"><option>Username / Password</option><option>Token</option><option>Cookie</option><option disabled>API Key (Future)</option></select>
+      </div>
+      <div class="grid-2">
+        <div class="field"><label>Username</label><input type="text" placeholder="qa-bot@acmecorp.com"></div>
+        <div class="field"><label>Password</label><input type="text" placeholder="••••••••"></div>
+      </div>
+      <div style="font-size:12px;color:var(--color-text-secondary);">Credentials are always stored encrypted.</div>`;
+  }
+  return `
+    <div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:4px;">Review before creating.</div>
+    <div class="card" style="background:var(--color-bg-surface-secondary);">
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Project Name</span><span>${STATE.createProject.name || '(untitled)'}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Client</span><span>${STATE.createProject.client || '—'}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Environments</span><span>${STATE.createProject.environments.join(', ')}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--color-text-secondary);">Authentication</span><span>Configured</span></div>
+      </div>
+    </div>`;
+}
+
+function renderModal(){
+  const root = document.getElementById('modal-root');
+  const cp = STATE.createProject;
+  if (!cp.open) { root.innerHTML = ''; return; }
+  const stepLabels = ['Basic Information','Environments','Authentication','Finish'];
+  root.innerHTML = `
+    <div class="modal-backdrop" onclick="if(event.target===this) closeCreateProject()">
+      <div class="modal">
+        <div class="modal-header"><h2>New Project — ${stepLabels[cp.step-1]}</h2><button class="modal-close" onclick="closeCreateProject()">✕</button></div>
+        <div class="step-indicator">${[1,2,3,4].map(n=>`<div class="step-dot ${n<cp.step?'done':n===cp.step?'active':''}"></div>`).join('')}</div>
+        <div class="modal-body">${modalStepBody()}</div>
+        <div class="modal-footer">
+          <button class="btn btn-text" onclick="closeCreateProject()">Cancel</button>
+          <div style="display:flex;gap:8px;">
+            ${cp.step>1 ? '<button class="btn btn-secondary" onclick="createProjectBack()">Back</button>' : ''}
+            ${cp.step<4 ? '<button class="btn btn-primary" onclick="createProjectNext()">Next</button>' : '<button class="btn btn-primary" onclick="finishCreateProject()">Create Project</button>'}
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function animatedClose(rootId, afterClear){
+  const root = document.getElementById(rootId);
+  const backdrop = root.querySelector('.modal-backdrop');
+  if (backdrop) { backdrop.classList.add('closing'); setTimeout(() => { if (afterClear) afterClear(); }, 130); }
+  else if (afterClear) afterClear();
+}
+
+/* ---------------- GENERIC CONFIRMATION DIALOG ---------------- */
+
+function openConfirm({title, message, confirmLabel='Confirm', danger=false, onConfirm}){
+  STATE.confirm = { open:true, title, message, confirmLabel, danger, onConfirm };
+  renderConfirm();
+}
+function closeConfirm(){ STATE.confirm.open = false; animatedClose('confirm-root', renderConfirm); }
+function confirmAction(){
+  const fn = STATE.confirm.onConfirm;
+  STATE.confirm.open = false;
+  animatedClose('confirm-root', () => { renderConfirm(); if (typeof fn === 'function') fn(); });
+}
+function renderConfirm(){
+  const root = document.getElementById('confirm-root');
+  const c = STATE.confirm;
+  if (!c || !c.open) { root.innerHTML = ''; return; }
+  root.innerHTML = `
+    <div class="modal-backdrop" style="z-index:200;" onclick="if(event.target===this) closeConfirm()">
+      <div class="modal" style="width:420px;">
+        <div class="modal-header"><h2>${c.title}</h2><button class="modal-close" onclick="closeConfirm()">✕</button></div>
+        <div class="modal-body"><div style="font-size:13.5px;color:var(--color-text-secondary);line-height:1.5;">${c.message}</div></div>
+        <div class="modal-footer" style="justify-content:flex-end;">
+          <button class="btn btn-secondary" onclick="closeConfirm()">Cancel</button>
+          <button class="btn ${c.danger ? 'btn-danger' : 'btn-primary'}" onclick="confirmAction()">${c.confirmLabel}</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ---------------- ADD ENVIRONMENT MODAL ---------------- */
+
+function openEnvModal(){ STATE.envModal.open = true; renderEnvModal(); }
+function closeEnvModal(){ STATE.envModal.open = false; animatedClose('modal-root', renderEnvModal); }
+function saveEnv(){
+  const name = document.getElementById('env-name').value || 'New Environment';
+  const url = document.getElementById('env-url').value || 'example.com';
+  ENVIRONMENTS.push({ name, url, status:'Online', auth:'Not Configured' });
+  STATE.envModal.open = false;
+  renderEnvModal();
+  renderContent();
+}
+function renderEnvModal(){
+  const root = document.getElementById('modal-root');
+  if (!STATE.envModal.open) { if (!STATE.createProject.open) root.innerHTML=''; return; }
+  root.innerHTML = `
+    <div class="modal-backdrop" onclick="if(event.target===this) closeEnvModal()">
+      <div class="modal">
+        <div class="modal-header"><h2>Add Environment</h2><button class="modal-close" onclick="closeEnvModal()">✕</button></div>
+        <div class="modal-body">
+          <div class="field"><label>Environment Name</label><input type="text" id="env-name" placeholder="e.g. UAT"></div>
+          <div class="field"><label>Base URL</label><input type="text" id="env-url" placeholder="uat.acmecorp.com"></div>
+          <div class="field"><label>Login URL</label><input type="text" placeholder="uat.acmecorp.com/login"></div>
+          <div class="grid-2">
+            <div class="field"><label>Username</label><input type="text" placeholder="qa-bot@acmecorp.com"></div>
+            <div class="field"><label>Password</label><input type="text" placeholder="••••••••"></div>
+          </div>
+          <div class="field"><label>Notes</label><textarea rows="2" placeholder="Anything the team should know about this environment"></textarea></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-text" onclick="toast('Connection verified.', 'success')">Test Connection</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary" onclick="closeEnvModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveEnv()">Save Environment</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ---------------- UPLOAD KNOWLEDGE SOURCE MODAL ---------------- */
+
+function openUploadModal(method){ STATE.uploadModal = { open:true, method: method || 'file' }; renderUploadModal(); }
+function closeUploadModal(){ STATE.uploadModal.open = false; animatedClose('modal-root', renderUploadModal); }
+function setUploadMethod(method){ STATE.uploadModal.method = method; renderUploadModal(); }
+function saveUpload(){
+  const typeEl = document.getElementById('upload-type');
+  const type = typeEl ? typeEl.value : 'Requirements Document';
+  const iconMap = { 'Requirements Document':'doc','BRD':'doc','PRD':'doc','Acceptance Criteria':'doc','Test Cases':'checklist','Business Rules':'doc','Content Sheets':'sheet','Figma Design':'figma' };
+  const name = STATE.uploadModal.method === 'file' ? (document.getElementById('upload-filename')?.value || 'New_Document.pdf') : 'Pasted Content.txt';
+  KNOWLEDGE_SOURCES.push({ name, type, icon: iconMap[type] || 'doc', uploadedBy:'You', date:'Just now', status:'Processing' });
+  STATE.selectedSource = KNOWLEDGE_SOURCES.length - 1;
+  STATE.uploadModal.open = false;
+  renderUploadModal();
+  renderContent();
+}
+function renderUploadModal(){
+  const root = document.getElementById('modal-root');
+  const um = STATE.uploadModal;
+  if (!um.open) { if (!STATE.createProject.open && !STATE.envModal.open) root.innerHTML=''; return; }
+  const typeOptions = ['Requirements Document','BRD','PRD','Acceptance Criteria','Test Cases','Business Rules','Content Sheets','Figma Design'];
+  root.innerHTML = `
+    <div class="modal-backdrop" onclick="if(event.target===this) closeUploadModal()">
+      <div class="modal">
+        <div class="modal-header"><h2>Add Knowledge Source</h2><button class="modal-close" onclick="closeUploadModal()">✕</button></div>
+        <div class="modal-body">
+          <div class="field"><label>Source Type</label>
+            <select id="upload-type">${typeOptions.map(t=>`<option>${t}</option>`).join('')}</select>
+          </div>
+          <div class="tabs" style="margin-bottom:2px;">
+            <div class="tab ${um.method==='file'?'active':''}" onclick="setUploadMethod('file')">Upload File</div>
+            <div class="tab ${um.method==='text'?'active':''}" onclick="setUploadMethod('text')">Paste Text</div>
+          </div>
+          ${um.method === 'file' ? `
+            <div class="upload-dropzone" style="padding:32px;">
+              <div style="margin-bottom:10px;">Drag a file here, or</div>
+              <input type="text" id="upload-filename" placeholder="Checkout_Test_Cases.xlsx" style="border:1px solid var(--color-border-default);border-radius:6px;padding:9px 12px;font-family:inherit;font-size:13px;width:70%;margin-bottom:10px;">
+              <div>${['PDF','DOCX','XLSX','CSV','TXT','Markdown'].map(t=>`<span class="filetype-badge">${t}</span>`).join('')}</div>
+            </div>` : `
+            <div class="field"><textarea rows="6" placeholder="Paste requirements, test cases, or business rules as plain text..."></textarea></div>
+          `}
+        </div>
+        <div class="modal-footer" style="justify-content:flex-end;">
+          <button class="btn btn-secondary" onclick="closeUploadModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveUpload()">${um.method==='file' ? 'Upload' : 'Add to Knowledge Base'}</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ---------------- INVITE USER MODAL ---------------- */
+
+function openInviteModal(){ STATE.inviteModal.open = true; renderInviteModal(); }
+function closeInviteModal(){ STATE.inviteModal.open = false; animatedClose('modal-root', renderInviteModal); }
+function saveInvite(){
+  const name = document.getElementById('invite-name').value || 'New User';
+  const email = document.getElementById('invite-email').value || 'new.user@company.com';
+  const role = document.getElementById('invite-role').value;
+  ADMIN_USERS.push([name, email, role, 'Invited', '—']);
+  STATE.inviteModal.open = false;
+  renderInviteModal();
+  renderContent();
+}
+function renderInviteModal(){
+  const root = document.getElementById('modal-root');
+  if (!STATE.inviteModal.open) { if (!STATE.createProject.open && !STATE.envModal.open && !STATE.uploadModal.open) root.innerHTML=''; return; }
+  root.innerHTML = `
+    <div class="modal-backdrop" onclick="if(event.target===this) closeInviteModal()">
+      <div class="modal">
+        <div class="modal-header"><h2>Invite User</h2><button class="modal-close" onclick="closeInviteModal()">✕</button></div>
+        <div class="modal-body">
+          <div class="field"><label>Name</label><input type="text" id="invite-name" placeholder="e.g. Priya Nair"></div>
+          <div class="field"><label>Email</label><input type="text" id="invite-email" placeholder="priya@company.com"></div>
+          <div class="field"><label>Role</label>
+            <select id="invite-role"><option>QA Engineer</option><option>QA Lead</option><option>Administrator</option><option>Viewer</option></select>
+          </div>
+        </div>
+        <div class="modal-footer" style="justify-content:flex-end;">
+          <button class="btn btn-secondary" onclick="closeInviteModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveInvite()">Send Invite</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ---------------- CONNECT FIGMA MODAL ---------------- */
+
+function openFigmaModal(){ STATE.figmaModal.open = true; renderFigmaModal(); }
+function closeFigmaModal(){ STATE.figmaModal.open = false; animatedClose('modal-root', renderFigmaModal); }
+function saveFigma(){
+  STATE.figmaModal.open = false;
+  renderFigmaModal();
+  KNOWLEDGE_SOURCES.push({ name:'Homepage.fig', type:'Figma Design', icon:'figma', uploadedBy:'You', date:'Just now', status:'Processed' });
+  openConfirm({ title:'Figma Connected', message:'Your Figma file is connected. It will now be used for Figma Comparison audits and added to this project\u2019s knowledge base.', confirmLabel:'Done', onConfirm:()=>{} });
+}
+function renderFigmaModal(){
+  const root = document.getElementById('modal-root');
+  if (!STATE.figmaModal.open) { if (!STATE.createProject.open && !STATE.envModal.open && !STATE.uploadModal.open && !STATE.inviteModal.open) root.innerHTML=''; return; }
+  root.innerHTML = `
+    <div class="modal-backdrop" onclick="if(event.target===this) closeFigmaModal()">
+      <div class="modal">
+        <div class="modal-header"><h2>Connect Figma</h2><button class="modal-close" onclick="closeFigmaModal()">✕</button></div>
+        <div class="modal-body">
+          <div style="font-size:13px;color:var(--color-text-secondary);">Paste a Figma file link to enable Figma Comparison audits against your live pages.</div>
+          <div class="field"><label>Figma File URL</label><input type="text" placeholder="https://figma.com/design/..."></div>
+        </div>
+        <div class="modal-footer" style="justify-content:flex-end;">
+          <button class="btn btn-secondary" onclick="closeFigmaModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveFigma()">Connect</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+const SCREENS = {
+  dashboard: screenDashboard, projects: screenProjects, project: screenProject, runs: screenHistory, findings: screenFindings,
+  reports: screenReports, history: screenHistory, 'run-audit': screenRunAudit, 'live-audit': screenLiveAudit,
+  'audit-summary': screenAuditSummary, settings: screenSettings, admin: screenAdmin,
+  help: () => `<div class="empty-state"><div class="title">Help Center</div>Documentation coming soon.</div>`,
+};
+
+function renderContent(){
+  const fn = SCREENS[STATE.screen] || (()=>'');
+  const el = document.getElementById('content');
+  el.innerHTML = fn();
+  el.classList.remove('content-enter');
+  void el.offsetWidth;
+  el.classList.add('content-enter');
+  animateEntrances();
+}
+
+renderAuth('login');
+</script>
+</body>
+</html>

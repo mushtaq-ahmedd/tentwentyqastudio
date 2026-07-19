@@ -1,0 +1,38 @@
+# Monorepo root — see apps/web/.gitignore for the Next.js-specific set.
+
+# dependencies
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# env files — never commit real secrets (docs/10, docs/11)
+.env
+.env.local
+.env.*.local
+
+# build output
+**/.next/
+**/dist/
+**/build/
+**/out/
+
+# prisma
+packages/db/prisma/*.db
+packages/db/generated/
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS / editor
+.DS_Store
+*.pem
+
+# typescript
+*.tsbuildinfo
+
+# Claude Code local tool state (machine-specific, not project source)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.agents/

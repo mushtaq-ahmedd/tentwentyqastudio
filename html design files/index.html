@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>TenTwenty QA Studio — Product Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Design tokens → components → layout. Load order matters for CSS cascade. -->
+<link rel="stylesheet" href="styles/tokens.css">
+<link rel="stylesheet" href="styles/base.css">
+<link rel="stylesheet" href="styles/components.css">
+</head>
+<body>
+<div class="app-shell" style="display:none;">
+  <nav class="sidebar" id="sidebar"></nav>
+  <div class="main">
+    <header class="header" id="header"></header>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+<div id="auth-root" style="display:none;"></div>
+<div id="modal-root"></div>
+<div id="confirm-root"></div>
+<div id="toast-root"></div>
+
+<!--
+  All scripts are classic (non-module) scripts sharing one global scope, so
+  load order only matters where something is EXECUTED immediately at parse
+  time (const/let assignments like ICONS, STATE, SCREENS). Function bodies
+  are hoisted and not evaluated until called, so page files can reference
+  helpers defined in shared/ regardless of their own position, as long as
+  app.js (which builds the SCREENS map and boots the app) loads LAST.
+-->
+<script src="shared/icons.js"></script>
+<script src="shared/nav-config.js"></script>
+<script src="shared/state.js"></script>
+<script src="shared/toast.js"></script>
+<script src="shared/auth.js"></script>
+<script src="shared/app-shell.js"></script>
+<script src="shared/modals.js"></script>
+
+<script src="pages/dashboard.js"></script>
+<script src="pages/projects.js"></script>
+<script src="pages/audit.js"></script>
+<script src="pages/findings.js"></script>
+<script src="pages/reports.js"></script>
+<script src="pages/history.js"></script>
+<script src="pages/settings.js"></script>
+<script src="pages/admin.js"></script>
+
+<script src="app.js"></script>
+</body>
+</html>

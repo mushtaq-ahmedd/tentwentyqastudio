@@ -1,0 +1,386 @@
+// tentwenty QA Studio — Core Platform schema.
+// Entity chain and field sourcing: docs/05-database-and-api.md, docs/03-system-and-engine-architecture.md.
+// Every model maps 1:1 onto an existing frontend type in apps/web/src/lib/types — this schema
+// is the real-data replacement for that mock layer, not a redesign of its shape.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Supabase's pooled (pgbouncer) connection doesn't support migrations — Prisma uses this
+  // direct connection for `migrate` while the app uses the pooled DATABASE_URL at runtime.
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Users & Roles
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  ADMINISTRATOR
+  QA_LEAD
+  QA_ENGINEER
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+  INVITED
+}
+
+/// Mirrors Supabase Auth's `auth.users` by id (see docs/05 "Resolved decision" note on Supabase
+/// Auth) — this table holds the platform-specific profile/role data Supabase Auth doesn't.
+model User {
+  id            String     @id @default(uuid()) @db.Uuid
+  name          String
+  email         String     @unique
+  role          UserRole   @default(QA_ENGINEER)
+  status        UserStatus @default(INVITED)
+  lastActiveAt  DateTime?  @map("last_active_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+  projects      Project[]  @relation("ProjectOwner")
+  auditsStarted Audit[]    @relation("AuditStartedBy")
+  reports       Report[]   @relation("ReportGeneratedBy")
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Projects & Environments
+// ---------------------------------------------------------------------------
+
+enum ProjectStatus {
+  READY
+  READY_WITH_WARNINGS
+  NOT_READY
+}
+
+model Project {
+  id           String        @id @default(uuid()) @db.Uuid
+  name         String
+  description  String        @default("")
+  clientName   String        @map("client_name") @default("")
+  baseUrl      String        @map("base_url") @default("")
+  figmaFileUrl String?       @map("figma_file_url")
+  status       ProjectStatus @default(NOT_READY)
+  ownerId      String        @map("owner_id") @db.Uuid
+  owner        User          @relation("ProjectOwner", fields: [ownerId], references: [id])
+  createdAt    DateTime      @default(now()) @map("created_at")
+  /// Soft-archive — hidden from the main Projects list but never deleted (docs/09: "hidden but
+  /// restorable"). Distinct from an actual delete, which is a separate, permanent action.
+  archivedAt   DateTime?     @map("archived_at")
+
+  environments      Environment[]
+  knowledgeSources  KnowledgeSource[]
+  audits            Audit[]
+  reports           Report[]
+
+  @@index([ownerId])
+  @@map("projects")
+}
+
+enum EnvironmentAuthStatus {
+  VERIFIED
+  NOT_CONFIGURED
+}
+
+model Environment {
+  id         String                 @id @default(uuid()) @db.Uuid
+  projectId  String                 @map("project_id") @db.Uuid
+  project    Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name       String
+  url        String
+  loginUrl   String?                @map("login_url")
+  online     Boolean                @default(true)
+  authStatus EnvironmentAuthStatus  @default(NOT_CONFIGURED) @map("auth_status")
+  notes      String                 @default("")
+
+  // Auth credentials for the audited environment (never the platform's own auth) — encrypted at
+  // rest. Never logged, per docs/10/docs/11's secrets rules.
+  authMethod     String? @map("auth_method")
+  encryptedCreds String? @map("encrypted_creds")
+
+  audits Audit[]
+
+  @@index([projectId])
+  @@map("environments")
+}
+
+enum KnowledgeSourceType {
+  REQUIREMENTS_DOCUMENT
+  BRD
+  PRD
+  ACCEPTANCE_CRITERIA
+  TEST_CASES
+  BUSINESS_RULES
+  CONTENT_SHEETS
+  FIGMA_DESIGN
+}
+
+enum KnowledgeSourceStatus {
+  PROCESSING
+  PROCESSED
+}
+
+model KnowledgeSource {
+  id         String                @id @default(uuid()) @db.Uuid
+  projectId  String                @map("project_id") @db.Uuid
+  project    Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name       String
+  type       KnowledgeSourceType
+  /// Object storage path (Supabase Storage) — file contents never live in Postgres.
+  storagePath String?              @map("storage_path")
+  uploadedBy String                @map("uploaded_by")
+  uploadedAt DateTime              @default(now()) @map("uploaded_at")
+  status     KnowledgeSourceStatus @default(PROCESSING)
+
+  @@index([projectId])
+  @@map("knowledge_sources")
+}
+
+// ---------------------------------------------------------------------------
+// Audits, Pages, Engine Results
+// ---------------------------------------------------------------------------
+
+enum AuditStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+/// docs/09's business-capability language — Accessibility intentionally excluded from this V1
+/// enum per CLAUDE.md's V1 Scope Fence; add it back only when V2 accessibility validation ships.
+enum ValidationType {
+  UI_VALIDATION
+  FIGMA_COMPARISON
+  CONTENT_VALIDATION
+  GRAMMAR_VALIDATION
+  FUNCTIONAL_VALIDATION
+}
+
+/// docs/03 Engine Categories — kept as one enum across Collection/Validation/Processing engines
+/// since Audit/EngineResult/Finding all reference "which engine" the same way.
+enum EngineName {
+  DISCOVERY
+  BROWSER
+  FIGMA
+  ELEMENT_MATCHING
+  UI_VALIDATION
+  VISUAL
+  CONTENT
+  FUNCTIONAL
+  ACCESSIBILITY
+  PERFORMANCE
+  SECURITY
+  CONFIDENCE
+  EVIDENCE
+  AI
+  REPORT
+}
+
+enum EngineStatus {
+  WAITING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+/// Immutable after `status` reaches COMPLETED/FAILED/CANCELLED — docs/05 "Audit Immutability".
+/// Enforce via application-layer checks (a DB trigger is the stronger version; add one before
+/// production per docs/11's migration-safety notes if this proves easy to violate accidentally).
+model Audit {
+  id              String         @id @default(uuid()) @db.Uuid
+  runNumber       Int            @default(autoincrement()) @map("run_number")
+  projectId       String         @map("project_id") @db.Uuid
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environmentId   String         @map("environment_id") @db.Uuid
+  environment     Environment    @relation(fields: [environmentId], references: [id])
+  status          AuditStatus    @default(QUEUED)
+  validationTypes ValidationType[] @map("validation_types")
+  startedById     String         @map("started_by_id") @db.Uuid
+  startedBy       User           @relation("AuditStartedBy", fields: [startedById], references: [id])
+
+  currentEngine   EngineName?    @map("current_engine")
+  currentActivity String?        @map("current_activity")
+  progressPercent Int            @default(0) @map("progress_percent")
+
+  startedAt DateTime  @default(now()) @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+
+  pages         Page[]
+  findings      Finding[]
+  engineResults EngineResult[]
+  reports       Report[]
+
+  @@index([projectId])
+  @@index([environmentId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("audits")
+}
+
+model EngineResult {
+  id             String       @id @default(uuid()) @db.Uuid
+  auditId        String       @map("audit_id") @db.Uuid
+  audit          Audit        @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  engine         EngineName
+  status         EngineStatus @default(WAITING)
+  durationSeconds Int?        @map("duration_seconds")
+  findingsCount  Int          @default(0) @map("findings_count")
+  errorCount     Int          @default(0) @map("error_count")
+
+  @@index([auditId])
+  @@map("engine_results")
+}
+
+enum PageStatus {
+  PENDING
+  VALIDATED
+  FAILED
+}
+
+model Page {
+  id      String     @id @default(uuid()) @db.Uuid
+  auditId String     @map("audit_id") @db.Uuid
+  audit   Audit      @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  url     String
+  name    String
+  status  PageStatus @default(PENDING)
+
+  findings Finding[]
+
+  @@index([auditId])
+  @@map("pages")
+}
+
+// ---------------------------------------------------------------------------
+// Findings & Evidence
+// ---------------------------------------------------------------------------
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum FindingStatus {
+  NEW
+  REVIEWED
+  ACCEPTED
+  REJECTED
+  IGNORED
+}
+
+/// Field set matches docs/03's platform-wide Finding contract exactly, plus the documented
+/// `businessImpact` extension (see docs/03's "Platform extension" note).
+model Finding {
+  id                 String        @id @default(uuid()) @db.Uuid
+  auditId            String        @map("audit_id") @db.Uuid
+  audit              Audit         @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  pageId             String        @map("page_id") @db.Uuid
+  page               Page          @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  projectId          String        @map("project_id") @db.Uuid
+
+  engine             EngineName
+  severity           Severity
+  /// 0–1. Set once by the Engine, then overwritten by the Confidence Engine's blended score
+  /// (docs/03 "Confidence Model") — never presented to the user as the Engine's own unilateral verdict.
+  confidence         Float
+  category           String?
+  title              String
+  description        String        @default("")
+  expectedResult     String        @map("expected_result")
+  actualResult       String        @map("actual_result")
+  businessImpact     String        @default("") @map("business_impact")
+  suggestedResolution String       @map("suggested_resolution")
+  status             FindingStatus @default(NEW)
+  createdAt          DateTime      @default(now()) @map("created_at")
+
+  evidence Evidence[]
+
+  @@index([auditId])
+  @@index([projectId])
+  @@index([severity])
+  @@index([status])
+  @@index([createdAt])
+  @@map("findings")
+}
+
+enum EvidenceType {
+  SCREENSHOT
+  HIGHLIGHTED_SCREENSHOT
+  DOM_SNAPSHOT
+  HTML_SNAPSHOT
+  CSS_SNAPSHOT
+  CONSOLE_LOGS
+  NETWORK_LOGS
+  API_RESPONSE
+  TRACE_FILE
+}
+
+/// Metadata only, per docs/05 — file bytes live in Supabase Storage at `storagePath`.
+model Evidence {
+  id          String       @id @default(uuid()) @db.Uuid
+  findingId   String       @map("finding_id") @db.Uuid
+  finding     Finding      @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  type        EvidenceType
+  storagePath String       @map("storage_path")
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  @@index([findingId])
+  @@map("evidence")
+}
+
+// ---------------------------------------------------------------------------
+// Reports
+// ---------------------------------------------------------------------------
+
+enum ReportType {
+  DEVELOPER
+  MANAGEMENT
+  EXECUTIVE
+}
+
+model Report {
+  id            String     @id @default(uuid()) @db.Uuid
+  auditId       String     @map("audit_id") @db.Uuid
+  audit         Audit      @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  projectId     String     @map("project_id") @db.Uuid
+  project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type          ReportType
+  title         String
+  /// PDF/HTML/CSV file in Supabase Storage — never generated on demand from a stale audit.
+  storagePath   String?    @map("storage_path")
+  generatedById String     @map("generated_by_id") @db.Uuid
+  generatedBy   User       @relation("ReportGeneratedBy", fields: [generatedById], references: [id])
+  generatedAt   DateTime   @default(now()) @map("generated_at")
+
+  @@index([auditId])
+  @@index([projectId])
+  @@map("reports")
+}
+
+// ---------------------------------------------------------------------------
+// Platform Settings
+// ---------------------------------------------------------------------------
+
+/// Single-row table (per docs/05 "settings" table) — platform-wide, not per-user or per-project.
+model PlatformSettings {
+  id                     Int     @id @default(1)
+  aiProvider             String  @default("Anthropic") @map("ai_provider")
+  aiDefaultModel         String  @default("claude-sonnet-5") @map("ai_default_model")
+  screenshotQuality      String  @default("High") @map("screenshot_quality")
+  defaultTimeoutSeconds  Int     @default(30) @map("default_timeout_seconds")
+  retryCount             Int     @default(2) @map("retry_count")
+  defaultViewport        String  @default("Desktop (1440x900)") @map("default_viewport")
+
+  @@map("platform_settings")
+}

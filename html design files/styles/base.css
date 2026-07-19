@@ -1,0 +1,4 @@
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Inter',sans-serif;background:var(--color-bg-page);color:var(--color-text-primary);font-size:14px;line-height:1.45;}
+.mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+a{text-decoration:none;color:inherit;}

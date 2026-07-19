@@ -1,0 +1,16 @@
+{
+  "name": "tentwenty-qa-studio",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "db:generate": "pnpm --filter @tentwenty/db generate",
+    "db:migrate": "pnpm --filter @tentwenty/db migrate",
+    "db:seed": "pnpm --filter @tentwenty/db seed",
+    "db:studio": "pnpm --filter @tentwenty/db studio"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^11.0.0"
+  }
+}

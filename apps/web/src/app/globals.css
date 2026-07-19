@@ -1,0 +1,308 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design tokens extracted verbatim from html design files/styles/tokens.css.
+ * These are the source of truth — do not approximate or re-derive values.
+ */
+:root {
+  /* Primitive scale */
+  --slate-25: #FAFBFC;
+  --slate-50: #F5F6F8;
+  --slate-100: #EBEDF0;
+  --slate-200: #DCE0E5;
+  --slate-300: #C2C8D0;
+  --slate-400: #9AA3AF;
+  --slate-500: #6B7684;
+  --slate-600: #4C5563;
+  --slate-700: #333B47;
+  --slate-800: #20252E;
+  --slate-900: #12151B;
+  --teal-50: #EAF5F3;
+  --teal-100: #CDE7E2;
+  --teal-500: #0F6B5C;
+  --teal-600: #0C5A4E;
+  --teal-700: #0A4A40;
+  --green-100: #DCF3E3;
+  --green-500: #1F8A4C;
+  --green-700: #166238;
+  --amber-100: #FBEACB;
+  --amber-500: #B5790A;
+  --amber-700: #8A5B06;
+  --red-100: #FBDEDC;
+  --red-500: #C1362A;
+  --red-700: #932A20;
+  --blue-100: #DCE9F8;
+  --blue-500: #1E5FA8;
+  --blue-700: #16487F;
+
+  /* Semantic aliases (1:1 with tokens.css) */
+  --color-bg-page: var(--slate-50);
+  --color-bg-surface: #ffffff;
+  --color-bg-surface-secondary: var(--slate-25);
+  --color-bg-sidebar: var(--slate-900);
+  --color-bg-hover: var(--slate-100);
+  --color-text-primary: var(--slate-900);
+  --color-text-secondary: var(--slate-500);
+  --color-text-on-dark: #ffffff;
+  --color-text-on-dark-secondary: var(--slate-400);
+  --color-border-default: var(--slate-200);
+  --color-border-strong: var(--slate-300);
+  --color-accent-default: var(--teal-500);
+  --color-accent-hover: var(--teal-600);
+  --color-accent-subtle: var(--teal-50);
+  --color-success-default: var(--green-500);
+  --color-success-subtle: var(--green-100);
+  --color-success-subtle-text: var(--green-700);
+  --color-warning-default: var(--amber-500);
+  --color-warning-subtle: var(--amber-100);
+  --color-warning-subtle-text: var(--amber-700);
+  --color-error-default: var(--red-500);
+  --color-error-subtle: var(--red-100);
+  --color-error-subtle-text: var(--red-700);
+  --color-info-default: var(--blue-500);
+  --color-info-subtle: var(--blue-100);
+  --color-info-subtle-text: var(--blue-700);
+
+  --radius-control: 6px;
+  --radius-card: 8px;
+  --radius-modal: 12px;
+
+  --shadow-subtle: 0 1px 2px rgba(18, 21, 27, 0.05);
+  /*
+   * --shadow-medium is referenced by components.css (toasts, profile dropdown)
+   * but was never actually defined in tokens.css — filling the gap with a value
+   * consistent with the "two elevation levels" design note in README.md.
+   */
+  --shadow-medium: 0 12px 32px rgba(18, 21, 27, 0.18);
+
+  /* shadcn/ui semantic tokens, remapped onto the tokens above (no separate palette) */
+  --background: var(--color-bg-page);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-bg-surface);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-bg-surface);
+  --popover-foreground: var(--color-text-primary);
+  --primary: var(--color-accent-default);
+  --primary-foreground: #ffffff;
+  --secondary: var(--color-bg-surface-secondary);
+  --secondary-foreground: var(--color-text-primary);
+  --muted: var(--color-bg-surface-secondary);
+  --muted-foreground: var(--color-text-secondary);
+  --accent: var(--color-bg-hover);
+  --accent-foreground: var(--color-text-primary);
+  --destructive: var(--color-error-default);
+  --destructive-foreground: #ffffff;
+  --border: var(--color-border-default);
+  --input: var(--color-border-default);
+  --ring: var(--color-accent-default);
+  --radius: var(--radius-card);
+  --chart-1: var(--teal-500);
+  --chart-2: var(--blue-500);
+  --chart-3: var(--green-500);
+  --chart-4: var(--amber-500);
+  --chart-5: var(--red-500);
+  --sidebar: var(--color-bg-sidebar);
+  --sidebar-foreground: var(--color-text-on-dark-secondary);
+  --sidebar-primary: var(--color-accent-default);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(255, 255, 255, 0.05);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-ring: var(--color-accent-default);
+}
+
+/* V1 is a single light theme by design (see docs/09) — no .dark overrides yet. */
+
+@theme inline {
+  --color-slate-25: var(--slate-25);
+  --color-slate-50: var(--slate-50);
+  --color-slate-100: var(--slate-100);
+  --color-slate-200: var(--slate-200);
+  --color-slate-300: var(--slate-300);
+  --color-slate-400: var(--slate-400);
+  --color-slate-500: var(--slate-500);
+  --color-slate-600: var(--slate-600);
+  --color-slate-700: var(--slate-700);
+  --color-slate-800: var(--slate-800);
+  --color-slate-900: var(--slate-900);
+  --color-teal-50: var(--teal-50);
+  --color-teal-100: var(--teal-100);
+  --color-teal-500: var(--teal-500);
+  --color-teal-600: var(--teal-600);
+  --color-teal-700: var(--teal-700);
+  --color-green-100: var(--green-100);
+  --color-green-500: var(--green-500);
+  --color-green-700: var(--green-700);
+  --color-amber-100: var(--amber-100);
+  --color-amber-500: var(--amber-500);
+  --color-amber-700: var(--amber-700);
+  --color-red-100: var(--red-100);
+  --color-red-500: var(--red-500);
+  --color-red-700: var(--red-700);
+  --color-blue-100: var(--blue-100);
+  --color-blue-500: var(--blue-500);
+  --color-blue-700: var(--blue-700);
+
+  --color-bg-page: var(--color-bg-page);
+  --color-bg-surface: var(--color-bg-surface);
+  --color-bg-surface-secondary: var(--color-bg-surface-secondary);
+  --color-bg-sidebar: var(--color-bg-sidebar);
+  --color-bg-hover: var(--color-bg-hover);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-on-dark: var(--color-text-on-dark);
+  --color-text-on-dark-secondary: var(--color-text-on-dark-secondary);
+  --color-border-default: var(--color-border-default);
+  --color-border-strong: var(--color-border-strong);
+  --color-accent-default: var(--color-accent-default);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-subtle: var(--color-accent-subtle);
+  --color-success-default: var(--color-success-default);
+  --color-success-subtle: var(--color-success-subtle);
+  --color-success-subtle-text: var(--color-success-subtle-text);
+  --color-warning-default: var(--color-warning-default);
+  --color-warning-subtle: var(--color-warning-subtle);
+  --color-warning-subtle-text: var(--color-warning-subtle-text);
+  --color-error-default: var(--color-error-default);
+  --color-error-subtle: var(--color-error-subtle);
+  --color-error-subtle-text: var(--color-error-subtle-text);
+  --color-info-default: var(--color-info-default);
+  --color-info-subtle: var(--color-info-subtle);
+  --color-info-subtle-text: var(--color-info-subtle-text);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-plex-mono);
+  --font-heading: var(--font-inter);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  --radius-control: var(--radius-control);
+  --radius-card: var(--radius-card);
+  --radius-modal: var(--radius-modal);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --shadow-subtle: var(--shadow-subtle);
+  --shadow-medium: var(--shadow-medium);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-bg-page text-text-primary;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .font-mono-tabular {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Skeleton shimmer + entrance/status-dot motion — ported 1:1 from components.css */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+@keyframes content-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 160% 0;
+  }
+  100% {
+    background-position: -60% 0;
+  }
+}
+
+.status-dot-live::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid var(--color-info-default);
+  opacity: 0.5;
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+
+.content-enter {
+  animation: content-in 0.22s ease both;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    100deg,
+    var(--color-bg-surface-secondary) 30%,
+    var(--slate-100) 50%,
+    var(--color-bg-surface-secondary) 70%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-dot-live::after,
+  .content-enter,
+  .skeleton-shimmer {
+    animation: none;
+  }
+}
