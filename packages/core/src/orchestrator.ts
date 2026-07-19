@@ -53,7 +53,15 @@ export async function runAudit(auditId: string): Promise<void> {
     });
     if (!engineResultRow) continue; // already handled (defensive — shouldn't happen)
 
-    await runSingleEngine(engine, engineResultRow.id, context, audit.id, audit.projectId);
+    if (engine.scope === "audit") {
+      await runSingleEngine(engine, engineResultRow.id, context, audit.id, audit.projectId);
+    } else {
+      // "page" scope — docs/03 "Each page of an audit is also an independent execution unit."
+      // Sequential across pages for now, same in-process simplification already flagged above
+      // for the lack of a BullMQ queue — real per-page parallelism needs that queue first.
+      const pages = await prisma.page.findMany({ where: { auditId } });
+      await runPageScopedEngine(engine, engineResultRow.id, context, pages, audit.id, audit.projectId);
+    }
 
     if (!pagesPersisted && context.sharedResources.pages?.length) {
       await persistDiscoveredPages(audit.id, context.sharedResources.pages);
@@ -94,6 +102,30 @@ export async function runAudit(auditId: string): Promise<void> {
   }
 }
 
+/** Runs one engine's 5-method lifecycle once, with docs/03's retry policy (transient only, max
+ * `MAX_RETRIES`). Throws the last error if every attempt fails. */
+async function runEngineOnce(engine: Engine, context: EngineContext): Promise<EngineFinding[]> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
+    try {
+      await engine.initialize(context);
+      let findings = await engine.validate(context);
+      findings = await engine.collectEvidence(context, findings);
+      for (const finding of findings) {
+        finding.confidence = await engine.calculateConfidence(finding, context);
+      }
+      await engine.cleanup(context);
+      return findings;
+    } catch (err) {
+      lastError = err;
+      const isTransient = err instanceof TransientEngineError;
+      // docs/03: never retry permanent failures; retry transient ones up to MAX_RETRIES.
+      if (!isTransient || attempt > MAX_RETRIES) break;
+    }
+  }
+  throw lastError;
+}
+
 async function runSingleEngine(
   engine: Engine,
   engineResultId: string,
@@ -109,44 +141,81 @@ async function runSingleEngine(
   engineRegistry.setHealth(engine.id, "Running");
 
   const startedAt = Date.now();
-  let lastError: unknown;
+  try {
+    const findings = await runEngineOnce(engine, context);
+    const durationSeconds = Math.round((Date.now() - startedAt) / 1000);
+    await persistFindings(auditId, projectId, findings);
+    await prisma.engineResult.update({
+      where: { id: engineResultId },
+      data: { status: "COMPLETED", durationSeconds, findingsCount: findings.length },
+    });
+    engineRegistry.setHealth(engine.id, "Healthy");
+  } catch (err) {
+    console.error(`Engine "${engine.id}" failed for audit ${auditId}:`, err);
+    await prisma.engineResult.update({
+      where: { id: engineResultId },
+      data: {
+        status: "FAILED",
+        errorCount: { increment: 1 },
+        durationSeconds: Math.round((Date.now() - startedAt) / 1000),
+      },
+    });
+    engineRegistry.setHealth(engine.id, "Failed");
+  }
+}
 
-  for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
+/**
+ * Same lifecycle as `runSingleEngine`, once per discovered page (docs/03 "Each page of an audit
+ * is also an independent execution unit"). Sequential, not parallel — the same in-process
+ * simplification already flagged for the missing job queue; real per-page parallelism needs that
+ * queue. One page's failure doesn't fail the whole engine (docs/03 "Partial Failure Is
+ * Acceptable, Total Failure Is Not") — it's counted in `errorCount` and the remaining pages still
+ * run; the engine is only marked FAILED if every page failed.
+ */
+async function runPageScopedEngine(
+  engine: Engine,
+  engineResultId: string,
+  context: EngineContext,
+  pages: { id: string; url: string; name: string }[],
+  auditId: string,
+  projectId: string
+): Promise<void> {
+  await prisma.engineResult.update({ where: { id: engineResultId }, data: { status: "RUNNING" } });
+  await prisma.audit.update({
+    where: { id: auditId },
+    data: { currentEngine: engine.name, currentActivity: `Running ${engine.name}` },
+  });
+  engineRegistry.setHealth(engine.id, "Running");
+
+  const startedAt = Date.now();
+  let findingsCount = 0;
+  let errorCount = 0;
+
+  for (const page of pages) {
+    context.page = { id: page.id, url: page.url, name: page.name };
     try {
-      await engine.initialize(context);
-      let findings = await engine.validate(context);
-      findings = await engine.collectEvidence(context, findings);
-      for (const finding of findings) {
-        finding.confidence = await engine.calculateConfidence(finding, context);
-      }
-      await engine.cleanup(context);
-
-      const durationSeconds = Math.round((Date.now() - startedAt) / 1000);
+      const findings = await runEngineOnce(engine, context);
       await persistFindings(auditId, projectId, findings);
-      await prisma.engineResult.update({
-        where: { id: engineResultId },
-        data: { status: "COMPLETED", durationSeconds, findingsCount: findings.length },
-      });
-      engineRegistry.setHealth(engine.id, "Healthy");
-      return;
+      findingsCount += findings.length;
     } catch (err) {
-      lastError = err;
-      const isTransient = err instanceof TransientEngineError;
-      // docs/03: never retry permanent failures; retry transient ones up to MAX_RETRIES.
-      if (!isTransient || attempt > MAX_RETRIES) break;
+      errorCount += 1;
+      console.error(`Engine "${engine.id}" failed on page "${page.url}" for audit ${auditId}:`, err);
     }
   }
+  context.page = undefined;
 
-  console.error(`Engine "${engine.id}" failed for audit ${auditId}:`, lastError);
+  const durationSeconds = Math.round((Date.now() - startedAt) / 1000);
+  const allPagesFailed = pages.length > 0 && errorCount === pages.length;
   await prisma.engineResult.update({
     where: { id: engineResultId },
     data: {
-      status: "FAILED",
-      errorCount: { increment: 1 },
-      durationSeconds: Math.round((Date.now() - startedAt) / 1000),
+      status: allPagesFailed ? "FAILED" : "COMPLETED",
+      durationSeconds,
+      findingsCount,
+      errorCount,
     },
   });
-  engineRegistry.setHealth(engine.id, "Failed");
+  engineRegistry.setHealth(engine.id, allPagesFailed ? "Failed" : "Healthy");
 }
 
 async function persistDiscoveredPages(auditId: string, pages: DiscoveredPage[]): Promise<void> {

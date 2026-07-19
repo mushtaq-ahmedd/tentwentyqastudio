@@ -187,9 +187,18 @@ export function FindingsExplorer({
             </Tabs>
             {evidence ? (
               evidence.type === "screenshot" ? (
-                <div className="flex h-40 items-center justify-center rounded-card border border-border-default bg-bg-surface-secondary text-xs text-text-secondary">
-                  {evidence.content}
-                </div>
+                evidence.content.startsWith("http") ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL, not a static asset Next can optimize.
+                  <img
+                    src={evidence.content}
+                    alt={`${finding.title} — screenshot evidence`}
+                    className="max-h-96 w-full rounded-card border border-border-default object-contain"
+                  />
+                ) : (
+                  <div className="flex h-40 items-center justify-center rounded-card border border-border-default bg-bg-surface-secondary text-xs text-text-secondary">
+                    {evidence.content}
+                  </div>
+                )
               ) : (
                 <pre className="overflow-x-auto rounded-card bg-slate-900 p-3.5 font-mono text-xs whitespace-pre-wrap text-[#dfe3e8]">{evidence.content}</pre>
               )

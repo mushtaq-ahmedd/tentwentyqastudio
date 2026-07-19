@@ -12,6 +12,8 @@
     "@base-ui/react": "^1.6.0",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.7",
+    "@tentwenty/browser-engine": "workspace:*",
+    "@tentwenty/content-engine": "workspace:*",
     "@tentwenty/core": "workspace:*",
     "@tentwenty/db": "workspace:*",
     "@tentwenty/discovery-engine": "workspace:*",

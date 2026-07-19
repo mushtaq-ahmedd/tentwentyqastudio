@@ -11,12 +11,31 @@ export type DiscoveredPage = {
 };
 
 /**
+ * What the Browser Engine collects for one page — docs/03's diagram lists Console Monitoring,
+ * Network Monitoring, and Screenshot Capture as per-page collection activities. `*Path` fields
+ * are already-uploaded object storage paths (docs/05); the `*Text` fields are the same content
+ * kept in memory for the current run so same-process Validation engines can scan it without a
+ * redundant storage round-trip.
+ */
+export type BrowserPageArtifacts = {
+  screenshotPath: string;
+  domSnapshotPath: string;
+  consoleLogPath: string;
+  networkLogPath: string;
+  domHtml: string;
+  consoleMessages: string[];
+  networkErrors: string[];
+};
+
+/**
  * Data that Collection engines (Discovery/Browser/Figma) hand forward to later engines —
  * docs/03 "Engines must not request data directly from other Engines — only from the shared
  * input the Core Platform provides." Extended as Browser/Figma engines are built.
  */
 export type SharedResources = {
   pages?: DiscoveredPage[];
+  /** Keyed by page URL — populated by the Browser Engine, read by page-scoped Validation engines. */
+  pageArtifacts?: Record<string, BrowserPageArtifacts>;
   [key: string]: unknown;
 };
 
@@ -43,8 +62,9 @@ export type EngineContext = {
 
 export type EngineEvidence = {
   type: EvidenceType;
-  /** Inline content for now — swap for a real object-storage path (docs/05) once the Evidence
-   * Engine exists to own that upload step. */
+  /** A real object-storage path (docs/05) — already uploaded to the `evidence` bucket via
+   * `uploadEvidence()` (packages/core/src/storage.ts) by the time a Finding references it. Never
+   * raw content inline. */
   content: string;
 };
 
@@ -84,6 +104,12 @@ export interface Engine {
   /** Other Engine IDs that must complete first (docs/03 "Execution Strategy" dependency chain). */
   readonly dependencies: string[];
   readonly supportedValidationTypes: ValidationType[];
+  /**
+   * "audit" — runs once for the whole audit before any page exists yet (Discovery, Figma).
+   * "page" — runs once per discovered page, with `context.page` set (Browser, UI, Content,
+   * Functional, ...) — docs/03: "Each page of an audit is also an independent execution unit."
+   */
+  readonly scope: "audit" | "page";
 
   /**
    * Collection engines (Discovery/Browser/Figma) do their real gathering work here, mutating

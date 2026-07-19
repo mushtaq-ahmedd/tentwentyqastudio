@@ -1,18 +1,33 @@
 # 03 — System & Engine Architecture
 
-> **Implementation status (Phase B, first slice):** `packages/core` implements the Orchestrator
-> and standard Engine interface described below exactly as written. Two interim simplifications,
-> flagged per docs/10's discipline rather than silently deviating:
+> **Implementation status (Phase B):** `packages/core` implements the Orchestrator and standard
+> Engine interface described below exactly as written, plus one addition not yet in this doc: the
+> `Engine` interface carries a `scope: "audit" | "page"` field. Audit-scoped engines (Discovery)
+> run once; page-scoped engines (Browser, Content) run once per discovered page, sequentially —
+> `packages/core/src/orchestrator.ts`'s `runPageScopedEngine`. A single page's failure only counts
+> against that engine's `errorCount`; it doesn't fail the other pages or the audit (verified live:
+> a real crawl of lipsum.com hit two downloadable-file links the Browser Engine correctly couldn't
+> navigate to — the audit still completed the other 3 pages).
+>
+> Interim simplifications, flagged per docs/10's discipline rather than silently deviating:
 > - **No BullMQ/Redis yet** — the Orchestrator runs engines in-process, synchronously within the
->   `startAudit` Server Action, not as queued background jobs. Fine for a single Discovery crawl;
->   revisit once Browser-driven engines make a single request-lifetime execution impractical.
+>   `startAudit` Server Action, not as queued background jobs. A real audit against ~20 pages
+>   takes on the order of minutes (each page relaunches its own Chromium instance — see the
+>   Browser Engine README); revisit once that latency is a real problem for users, not just a
+>   known cost.
 > - **Engine Registry is in-memory, single-process** (`packages/core/src/registry.ts`) — correct
 >   for one Next.js process, but a real multi-worker deployment needs a shared registry instead.
+> - **Pages execute sequentially within a page-scoped engine, not in parallel** — same in-process
+>   constraint as above; real per-page parallelism needs the job queue.
 >
-> Only the **Discovery Engine** (`packages/engines/discovery-engine`) exists so far. Every other
-> Engine's `EngineResult` row is created at audit-start and stays `WAITING` — the Orchestrator
-> deliberately leaves the audit honestly `RUNNING` rather than faking a `COMPLETED` pipeline that
-> didn't actually validate anything.
+> Engines that exist so far: **Discovery** (`discovery-engine`, audit-scoped, real crawl),
+> **Browser** (`browser-engine`, page-scoped, real Playwright — screenshot/DOM/console/network,
+> uploaded to Supabase Storage), **Content** (`content-engine`, page-scoped, Mode 2 only —
+> deterministic placeholder/empty-heading/missing-title checks against the Browser Engine's DOM
+> snapshot; verified live against lipsum.com's real Lorem Ipsum content). Every other Engine's
+> `EngineResult` row is created at audit-start and stays `WAITING` — the Orchestrator deliberately
+> leaves the audit honestly `RUNNING` rather than faking a `COMPLETED` pipeline that didn't
+> actually validate anything.
 
 ## Architecture Philosophy
 

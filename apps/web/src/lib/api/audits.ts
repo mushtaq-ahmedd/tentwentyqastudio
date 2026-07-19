@@ -99,6 +99,10 @@ export async function startAudit(input: {
         engineResults: {
           create: [
             { engine: "DISCOVERY", status: "WAITING" },
+            // Every page-scoped Validation engine depends on Browser having rendered the page
+            // first, so it always runs once any page-level validation type is selected — same
+            // "always included" treatment as Discovery/Report, not user-selectable.
+            { engine: "BROWSER", status: "WAITING" },
             ...engineNames.map((engine) => ({ engine: engine as never, status: "WAITING" as const })),
             { engine: "REPORT", status: "WAITING" },
           ],

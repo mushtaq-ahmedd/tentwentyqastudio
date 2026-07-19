@@ -9,6 +9,11 @@ import {
 
 const MAX_PAGES = 20;
 const FETCH_TIMEOUT_MS = 10_000;
+/** Non-page downloadable assets — following these wastes a page slot and, worse, makes the
+ * Browser Engine's `page.goto()` throw ("Download is starting") since navigating to one triggers
+ * a file download instead of a page load. Discovered via a real crawl of lipsum.com, which links
+ * a banners.zip/.tar.gz — not a hypothetical case. */
+const NON_PAGE_EXTENSIONS = /\.(zip|tar|gz|tgz|rar|7z|exe|dmg|pkg|msi|pdf|docx?|xlsx?|pptx?|csv|mp4|mp3|wav|avi|mov)$/i;
 
 function normalizeUrl(url: string): string {
   const u = new URL(url);
@@ -69,7 +74,12 @@ async function crawl(baseUrl: string): Promise<DiscoveredPage[]> {
       if (!href || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("#")) return;
       try {
         const resolved = normalizeUrl(new URL(href, current).toString());
-        if (new URL(resolved).origin === origin && !visited.has(resolved) && !queue.includes(resolved)) {
+        if (
+          new URL(resolved).origin === origin &&
+          !NON_PAGE_EXTENSIONS.test(new URL(resolved).pathname) &&
+          !visited.has(resolved) &&
+          !queue.includes(resolved)
+        ) {
           queue.push(resolved);
         }
       } catch {
@@ -89,6 +99,7 @@ export const discoveryEngine: Engine = {
     "Crawls a project's environment to build the page inventory later engines validate against.",
   dependencies: [],
   supportedValidationTypes: [],
+  scope: "audit",
 
   async initialize(context: EngineContext) {
     const baseUrl = context.environment.url.startsWith("http")

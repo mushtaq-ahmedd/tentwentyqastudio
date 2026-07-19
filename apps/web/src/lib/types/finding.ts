@@ -46,14 +46,11 @@ export type Finding = {
   createdAt: string;
 };
 
-/**
- * Confidence-label thresholds are placeholders — docs/07-accuracy-benchmark.md (not read in
- * this pass) is the actual source of truth for Very High / High / Medium / Low cutoffs per
- * CLAUDE.md's Quality Bar. Replace these once doc 07 is consulted.
- */
+/** Thresholds per docs/07-accuracy-benchmark.md: 95-100% Very High, 85-94% High, 70-84% Medium,
+ * below 70% Low. */
 export function confidenceLabel(confidence: number): ConfidenceLabel {
   if (confidence >= 0.95) return "Very High";
   if (confidence >= 0.85) return "High";
-  if (confidence >= 0.65) return "Medium";
+  if (confidence >= 0.7) return "Medium";
   return "Low";
 }

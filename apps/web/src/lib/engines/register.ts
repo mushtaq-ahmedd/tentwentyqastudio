@@ -4,3 +4,5 @@
  * built — this file is the single place the Engine Registry (docs/03) gets populated from.
  */
 import "@tentwenty/discovery-engine";
+import "@tentwenty/browser-engine";
+import "@tentwenty/content-engine";

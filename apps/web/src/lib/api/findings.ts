@@ -1,8 +1,33 @@
 import { prisma } from "@tentwenty/db";
+import { downloadEvidenceText, getSignedEvidenceUrl } from "@tentwenty/core";
 import type { ApiResponse, Finding, FindingStatus, Severity } from "@/lib/types";
 import { requireNotViewer, requireUser } from "@/lib/auth/session";
 import { fail, guarded, ok } from "./client";
 import { toFinding, type FindingWithEvidence } from "./mappers";
+
+/**
+ * Evidence.content is a real object-storage path once an Engine has actually run (docs/05) — not
+ * displayable as-is. Resolves each finding's evidence in place: screenshots become short-lived
+ * signed URLs (frontend renders an <img>), everything else is downloaded as text (frontend
+ * renders a <pre>). Falls back to the raw stored value on failure rather than breaking the whole
+ * findings page — covers seed/mock evidence rows that were never real storage paths to begin
+ * with, and any object that's since been deleted from the bucket.
+ */
+async function resolveEvidenceContent(findings: Finding[]): Promise<Finding[]> {
+  for (const finding of findings) {
+    for (const evidence of finding.evidence) {
+      try {
+        evidence.content =
+          evidence.type === "screenshot"
+            ? await getSignedEvidenceUrl(evidence.content)
+            : await downloadEvidenceText(evidence.content);
+      } catch {
+        // Not a real storage path (mock/seed data) or the object is gone — show the raw value.
+      }
+    }
+  }
+  return findings;
+}
 
 const SEVERITY_TO_DB: Record<Severity, string> = {
   critical: "CRITICAL",
@@ -39,7 +64,7 @@ export async function fetchFindings(filter: FindingFilter = {}): Promise<ApiResp
       include: { evidence: true, page: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
     });
-    return ok(findings.map((f) => toFinding(f as FindingWithEvidence)));
+    return ok(await resolveEvidenceContent(findings.map((f) => toFinding(f as FindingWithEvidence))));
   });
 }
 
@@ -51,7 +76,8 @@ export async function fetchFinding(findingId: string): Promise<ApiResponse<Findi
       include: { evidence: true, page: { select: { name: true } } },
     });
     if (!finding) return fail("FINDING_NOT_FOUND", "Finding does not exist.");
-    return ok(toFinding(finding as FindingWithEvidence));
+    const [resolved] = await resolveEvidenceContent([toFinding(finding as FindingWithEvidence)]);
+    return ok(resolved);
   });
 }
 
