@@ -94,6 +94,19 @@
 > uploaded diff image (the first engine to produce `HIGHLIGHTED_SCREENSHOT` evidence). See the
 > engine's README for a flagged naming overlap with "Visual Regression" listed among *future*
 > engines in this doc's own Scalability Rule section, below.
+>
+> **Functional** (`functional-engine`) was extended (v0.2.0) beyond broken links to also cover
+> docs/02's V1-scope "Browser Validation" item (console errors, network errors, failed requests,
+> broken resources, missing images) — there's no separate `EngineName` slot for it, and it's the
+> same "judge data Browser Engine already collected" pattern as broken links, so it's folded in
+> here rather than invented as a new engine. Three new checks, all reusing data Browser Engine was
+> already capturing: Console Error (any `console.error`/uncaught exception during page load),
+> Missing Image (a failed request whose URL looks like an image), Broken Resource (any other
+> failed request — script/stylesheet/font/XHR). Live-verified against a real fixture page with a
+> deliberate console error, a missing image, and a missing script: all three fired correctly,
+> plus a bonus finding — Chromium itself logs resource-load failures to the console, so the
+> Console Error check picked up those too, not just the explicit one (a real, welcome signal, not
+> a bug).
 
 ## Architecture Philosophy
 
