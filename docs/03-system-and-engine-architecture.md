@@ -56,6 +56,17 @@
 > runner is wired up in this repo yet); the full engine against a real Figma file/rendered page is
 > not, for the same reason the Figma Engine's success path isn't (needs a real Figma personal
 > access token, not supplied yet).
+>
+> **UI Validation** (`ui-validation-engine`) also exists now — its first slice validates exactly
+> what Element Matching's text-only signal can honestly support: a Figma text element with no
+> live match ("Missing Design Element") and a matched element whose text isn't a near-perfect
+> match ("Design/Live Text Mismatch"). Layout/position/spacing/component-type checks (the rest of
+> docs/04's UI Validation list) aren't implemented — they need Element Matching to carry
+> position/size/type data forward first, which it doesn't yet. Selecting `UI Validation` now also
+> pulls in `FIGMA`/`ELEMENT_MATCHING` automatically (`audits.ts`), since UI Validation has nothing
+> to compare against without them — same treatment `Figma Comparison` alone already had. Not
+> live-verified for the same reason as Figma/Element Matching (no real Figma personal access token
+> supplied yet).
 
 ## Architecture Philosophy
 

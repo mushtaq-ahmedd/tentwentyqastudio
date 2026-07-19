@@ -47,6 +47,9 @@ importers:
       '@tentwenty/functional-engine':
         specifier: workspace:*
         version: link:../../packages/engines/functional-engine
+      '@tentwenty/ui-validation-engine':
+        specifier: workspace:*
+        version: link:../../packages/engines/ui-validation-engine
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -234,6 +237,22 @@ importers:
         version: 5.9.3
 
   packages/engines/functional-engine:
+    dependencies:
+      '@tentwenty/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@tentwenty/db':
+        specifier: workspace:*
+        version: link:../../db
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.43
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/engines/ui-validation-engine:
     dependencies:
       '@tentwenty/core':
         specifier: workspace:*
