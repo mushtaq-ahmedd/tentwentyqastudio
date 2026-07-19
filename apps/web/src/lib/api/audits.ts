@@ -119,6 +119,10 @@ export async function startAudit(input: {
             // Engine decides the final confidence") — unconditional, not user-selectable, same
             // treatment as Discovery/Browser/Report.
             { engine: "CONFIDENCE", status: "WAITING" },
+            // Explains findings + writes an executive summary after Confidence has blended
+            // scores (docs/06's pipeline) — unconditional, not user-selectable; degrades to no AI
+            // content (not a failure) if no provider is configured.
+            { engine: "AI", status: "WAITING" },
             { engine: "REPORT", status: "WAITING" },
           ],
         },

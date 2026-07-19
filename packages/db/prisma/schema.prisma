@@ -261,6 +261,12 @@ model Audit {
   currentActivity String?        @map("current_activity")
   progressPercent Int            @default(0) @map("progress_percent")
 
+  /// AI Engine output (docs/06) — an audit-level narrative summary. Purely additive: nothing
+  /// about the audit's actual result depends on this being present. Null if the AI Engine wasn't
+  /// configured, or its provider call failed — docs/06 "AI failure must never block report
+  /// generation."
+  aiExecutiveSummary String? @map("ai_executive_summary")
+
   startedAt DateTime  @default(now()) @map("started_at")
   endedAt   DateTime? @map("ended_at")
 
@@ -351,6 +357,10 @@ model Finding {
   actualResult       String        @map("actual_result")
   businessImpact     String        @default("") @map("business_impact")
   suggestedResolution String       @map("suggested_resolution")
+  /// AI Engine output (docs/06) — a human-readable explanation generated from this finding's own
+  /// fields, never the other way around: "the original finding is never altered by AI output."
+  /// Null if the AI Engine wasn't configured, or its provider call failed for this finding.
+  aiExplanation      String?       @map("ai_explanation")
   status             FindingStatus @default(NEW)
   createdAt          DateTime      @default(now()) @map("created_at")
 

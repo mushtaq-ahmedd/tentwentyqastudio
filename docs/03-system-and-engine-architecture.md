@@ -117,6 +117,27 @@
 > same as Figma Engine/Element Matching's data existing before UI Validation could fully use it.
 > Live-verified: three real audits' worth of CSS snapshot files (25-41KB of real JSON each,
 > correct mimetype) confirmed present in Storage, one per page.
+>
+> **AI** (`ai-engine`) also exists now — the first docs/06-governed engine. Generates a per-finding
+> `aiExplanation` (new `Finding` column) and one per-audit `aiExecutiveSummary` (new `Audit`
+> column), both purely additive — nothing about a finding's severity/confidence/other fields can
+> be changed by this engine (docs/06: "the original finding is never altered by AI output").
+> Provider-agnostic (`packages/core/src/ai/types.ts`'s `AIProvider` interface) with one real
+> implementation so far (Anthropic Claude). `getConfiguredAIProvider()` reads which
+> provider/model to use from the existing `platform_settings` table (docs/05 already documents
+> this table as holding "AI provider" — built in Phase A; the resolver was corrected mid-build to
+> read it rather than inventing a parallel env-var config) and only the secret API key
+> (`ANTHROPIC_API_KEY`) from the environment, returning `null` if unconfigured. Surfaced a real,
+> pre-existing gap while doing this: the Settings page displays `platform_settings` correctly but
+> has no working save path (same class of bug as the already-tracked Project Settings one) — added
+> to the deferred bug list. Unconditionally included on every audit, same as Discovery/Browser/
+> Confidence/Visual/Report — degrading to "no AI content" is a valid, honest outcome (docs/06:
+> "AI failure must never block report generation"), not a pipeline failure. Live-verified twice
+> (before and after the resolver correction): the failure path (no API key) leaves every finding's
+> `aiExplanation` and the audit's `aiExecutiveSummary` `null` while the engine still reports
+> `COMPLETED` and nothing else is affected. The success path (a real Anthropic call) is not
+> live-verified — same gap as the Figma Engine's success path, needs a real API key nobody has
+> supplied yet.
 
 ## Architecture Philosophy
 

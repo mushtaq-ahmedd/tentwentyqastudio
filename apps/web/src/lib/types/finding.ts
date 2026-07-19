@@ -41,6 +41,10 @@ export type Finding = {
   actualResult: string;
   businessImpact: string;
   suggestedResolution: string;
+  /** AI Engine output (docs/06) — a human-readable narrative generated from this finding's own
+   * fields; never alters them. Null if no AI provider is configured, or its call failed for this
+   * finding (docs/06: "AI failure must never block report generation"). */
+  aiExplanation: string | null;
   status: FindingStatus;
   evidence: Evidence[];
   createdAt: string;

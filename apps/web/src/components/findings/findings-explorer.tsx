@@ -173,6 +173,14 @@ export function FindingsExplorer({
           <Section label="Actual Result">{finding.actualResult}</Section>
           <Section label="Business Impact">{finding.businessImpact}</Section>
           <Section label="Suggested Resolution">{finding.suggestedResolution}</Section>
+          {finding.aiExplanation && (
+            <div className="mb-4.5 rounded-card border border-border-default bg-bg-surface-secondary p-3">
+              <div className="mb-1.5 text-[11px] font-semibold tracking-[0.04em] text-text-secondary uppercase">
+                AI Explanation
+              </div>
+              <div className="text-[13.5px]">{finding.aiExplanation}</div>
+            </div>
+          )}
 
           <div className="mb-4.5">
             <div className="mb-1.5 text-[11px] font-semibold tracking-[0.04em] text-text-secondary uppercase">Evidence</div>

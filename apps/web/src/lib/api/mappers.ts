@@ -274,6 +274,7 @@ export function toFinding(f: FindingWithEvidence): Finding {
     actualResult: f.actualResult,
     businessImpact: f.businessImpact,
     suggestedResolution: f.suggestedResolution,
+    aiExplanation: f.aiExplanation,
     status: FINDING_STATUS[f.status],
     createdAt: f.createdAt.toISOString(),
     evidence: f.evidence.map((e) => ({

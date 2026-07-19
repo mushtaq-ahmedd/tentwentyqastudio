@@ -31,6 +31,7 @@ export let FINDINGS: Finding[] = [
       "Users may not be able to proceed to the primary conversion flow, reducing usability and conversion rate.",
     suggestedResolution:
       "Verify that the CTA component is rendered correctly and matches the approved design.",
+    aiExplanation: null,
     status: "new",
     createdAt: CREATED_AT,
     evidence: evidenceFor("finding-1", {
@@ -57,6 +58,7 @@ export let FINDINGS: Finding[] = [
     businessImpact:
       "Conflicting policy language creates legal exposure and customer-support friction at checkout time.",
     suggestedResolution: "Align the Pricing page copy with the source-of-truth Terms page refund window.",
+    aiExplanation: null,
     status: "new",
     createdAt: CREATED_AT,
     evidence: evidenceFor("finding-2", {
@@ -79,6 +81,7 @@ export let FINDINGS: Finding[] = [
     actualResult: "Form submission throws a silent error and the page does not advance.",
     businessImpact: "Customers are fully blocked from completing purchases on this environment.",
     suggestedResolution: "Check the checkout API integration — likely a schema mismatch on the payment payload.",
+    aiExplanation: null,
     status: "reviewed",
     createdAt: CREATED_AT,
     evidence: evidenceFor("finding-3", {
@@ -100,6 +103,7 @@ export let FINDINGS: Finding[] = [
     actualResult: "Plan comparison buttons use 12px padding, inconsistent with the design system.",
     businessImpact: "Minor visual inconsistency; unlikely to affect usability but breaks design system compliance.",
     suggestedResolution: "Update the button component instance to use the standard padding token.",
+    aiExplanation: null,
     status: "new",
     createdAt: CREATED_AT,
     evidence: evidenceFor("finding-4", {
@@ -121,6 +125,7 @@ export let FINDINGS: Finding[] = [
     actualResult: 'Footer reads "© 2026 Acme Corp. All rigths reserved."',
     businessImpact: "Cosmetic only; low visibility but reflects on brand polish.",
     suggestedResolution: "Fix the typo in the footer copy.",
+    aiExplanation: null,
     status: "accepted",
     createdAt: CREATED_AT,
     evidence: evidenceFor("finding-5", {
@@ -142,6 +147,7 @@ export let FINDINGS: Finding[] = [
     actualResult: "Primary CTA button is missing from the homepage.",
     businessImpact: "Users may not be able to proceed to the primary conversion flow.",
     suggestedResolution: "Verify that the CTA component is rendered correctly and matches the approved design.",
+    aiExplanation: null,
     status: "new",
     createdAt: RUNNING_CREATED_AT,
     evidence: evidenceFor("finding-running-1", { screenshot: "Screenshot preview" }),
@@ -160,6 +166,7 @@ export let FINDINGS: Finding[] = [
     actualResult: "Plan comparison buttons use 12px padding, inconsistent with the design system.",
     businessImpact: "Minor visual inconsistency; unlikely to affect usability but breaks design system compliance.",
     suggestedResolution: "Update the button component instance to use the standard padding token.",
+    aiExplanation: null,
     status: "new",
     createdAt: RUNNING_CREATED_AT,
     evidence: evidenceFor("finding-running-2", { screenshot: "Screenshot preview" }),
