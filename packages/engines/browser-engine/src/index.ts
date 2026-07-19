@@ -20,13 +20,14 @@ const SETTLE_MS = 1_000;
 const MAX_DOM_ELEMENTS = 500;
 
 /**
- * Runs inside the real rendered page (not static HTML parsing — position/size require an actual
- * layout pass) to collect text-matching candidates for the Element Matching Engine: every
- * element whose own direct text (not descendants') is non-empty and visible. Kept as a single
- * self-contained function since Playwright serializes it into the page context.
+ * Runs inside the real rendered page (not static HTML parsing — position/size and computed style
+ * both require an actual layout/render pass) to collect text-matching candidates for the Element
+ * Matching Engine, each with a curated computed-style summary (docs/04 Browser Engine: "extract
+ * computed CSS") for future typography/color checks. Kept as a single self-contained function
+ * since Playwright serializes it into the page context.
  */
 function collectDomElements(maxElements: number): DomElement[] {
-  const results: { tag: string; text: string; x: number; y: number; width: number; height: number }[] = [];
+  const results: DomElement[] = [];
   const all = document.querySelectorAll("body *");
   for (const el of Array.from(all)) {
     if (results.length >= maxElements) break;
@@ -38,6 +39,7 @@ function collectDomElements(maxElements: number): DomElement[] {
     if (!directText) continue;
     const rect = el.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) continue;
+    const computed = getComputedStyle(el);
     results.push({
       tag: el.tagName.toLowerCase(),
       text: directText.slice(0, 200),
@@ -45,6 +47,14 @@ function collectDomElements(maxElements: number): DomElement[] {
       y: Math.round(rect.y),
       width: Math.round(rect.width),
       height: Math.round(rect.height),
+      style: {
+        color: computed.color,
+        backgroundColor: computed.backgroundColor,
+        fontFamily: computed.fontFamily,
+        fontSize: computed.fontSize,
+        fontWeight: computed.fontWeight,
+        display: computed.display,
+      },
     });
   }
   return results;
@@ -100,7 +110,7 @@ export const browserEngine: Engine = {
       const domHtml = await browserPage.content();
       const domElements = await browserPage.evaluate(collectDomElements, MAX_DOM_ELEMENTS);
 
-      const [screenshotPath, domSnapshotPath, consoleLogPath, networkLogPath] = await Promise.all([
+      const [screenshotPath, domSnapshotPath, consoleLogPath, networkLogPath, cssSnapshotPath] = await Promise.all([
         uploadEvidence(context.auditId, page.id, "screenshot", screenshotBuffer, "image/png"),
         uploadEvidence(context.auditId, page.id, "dom-snapshot", domHtml, "text/html"),
         uploadEvidence(
@@ -117,6 +127,9 @@ export const browserEngine: Engine = {
           networkLog.join("\n") || "(no network activity captured)",
           "text/plain"
         ),
+        // Every domElements entry's computed-style summary, keyed by tag/text/position so a
+        // reader can see which element each style belongs to — not the full page stylesheet.
+        uploadEvidence(context.auditId, page.id, "css-snapshot", JSON.stringify(domElements, null, 2), "application/json"),
       ]);
 
       // Independent of Evidence (which only exists where a Finding references it) — the Visual
@@ -128,6 +141,7 @@ export const browserEngine: Engine = {
         domSnapshotPath,
         consoleLogPath,
         networkLogPath,
+        cssSnapshotPath,
         domHtml,
         consoleMessages,
         networkErrors,

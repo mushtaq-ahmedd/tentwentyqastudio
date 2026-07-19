@@ -50,11 +50,12 @@ const figmaElements = [
   { id: "fe3", name: "CTA 2", type: "TEXT", text: "Learn More", figmaPageId: "p1", figmaPageName: "Page 1", parentFrameId: "f1", parentFrameName: "Homepage" },
   { id: "fe4", name: "Promo", type: "TEXT", text: "Exclusive Offer Ends Soon", figmaPageId: "p1", figmaPageName: "Page 1", parentFrameId: "f1", parentFrameName: "Homepage" },
 ];
+const style = { color: "rgb(0, 0, 0)", backgroundColor: "rgba(0, 0, 0, 0)", fontFamily: "sans-serif", fontSize: "16px", fontWeight: "400", display: "block" };
 const domElements = [
-  { tag: "h1", text: "Welcome to Acme", x: 0, y: 0, width: 100, height: 20 },
-  { tag: "a", text: "Learn More", x: 0, y: 30, width: 80, height: 16 },
-  { tag: "a", text: "Learn More", x: 0, y: 60, width: 80, height: 16 },
-  { tag: "footer", text: "© 2026 Acme Inc.", x: 0, y: 90, width: 200, height: 16 },
+  { tag: "h1", text: "Welcome to Acme", x: 0, y: 0, width: 100, height: 20, style },
+  { tag: "a", text: "Learn More", x: 0, y: 30, width: 80, height: 16, style },
+  { tag: "a", text: "Learn More", x: 0, y: 60, width: 80, height: 16, style },
+  { tag: "footer", text: "© 2026 Acme Inc.", x: 0, y: 90, width: 200, height: 16, style },
 ];
 
 const results = matchElements("https://example.com/", figmaElements, domElements);

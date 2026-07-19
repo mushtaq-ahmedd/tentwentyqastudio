@@ -22,6 +22,9 @@ export type BrowserPageArtifacts = {
   domSnapshotPath: string;
   consoleLogPath: string;
   networkLogPath: string;
+  /** JSON array of `DomElement`s (including each one's `style` summary) — docs/04 Browser
+   * Engine's "extract computed CSS", uploaded as evidence for future typography/color checks. */
+  cssSnapshotPath: string;
   domHtml: string;
   consoleMessages: string[];
   networkErrors: string[];
@@ -77,6 +80,18 @@ export type FigmaElement = {
   parentFrameName: string;
 };
 
+/** A curated subset of `getComputedStyle()` — the visual properties relevant to typography/color
+ * checks (docs/04 Browser Engine: "extract computed CSS"). Not the full computed style object
+ * (hundreds of properties per element) — see the Browser Engine README for why. */
+export type ComputedStyleSummary = {
+  color: string;
+  backgroundColor: string;
+  fontFamily: string;
+  fontSize: string;
+  fontWeight: string;
+  display: string;
+};
+
 /** One rendered DOM element the Browser Engine captured as a text-matching candidate — real
  * layout data from `getBoundingClientRect()` inside the actual browser, not parsed from static
  * HTML (position/size can't be known without a real layout pass). */
@@ -87,6 +102,7 @@ export type DomElement = {
   y: number;
   width: number;
   height: number;
+  style: ComputedStyleSummary;
 };
 
 /**

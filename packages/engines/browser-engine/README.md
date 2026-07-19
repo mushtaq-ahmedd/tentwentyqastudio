@@ -12,14 +12,16 @@ Renders one page in a real Chromium browser (Playwright) and captures the raw ar
 Validation engines need to actually judge something: full-page screenshot, DOM/HTML snapshot,
 console messages (including uncaught page errors), network activity (every response's
 status/method/URL, plus a filtered list of 4xx/5xx responses), and a structured list of rendered
-text-bearing elements (`domElements` — tag, own direct text, and real bounding box from
-`getBoundingClientRect()`) for the Element Matching Engine's text-matching candidates. Position
-data specifically requires a real rendered layout pass — it can't be derived from the static HTML
-snapshot alone, which is why this engine (not a cheerio-style parser) is the one that collects it.
+text-bearing elements (`domElements` — tag, own direct text, real bounding box from
+`getBoundingClientRect()`, and a curated computed-style summary from `getComputedStyle()` — color,
+background color, font family/size/weight, display) for the Element Matching Engine's
+text-matching candidates and future typography/color checks. Position and computed style both
+specifically require a real rendered layout pass — neither can be derived from the static HTML
+snapshot alone, which is why this engine (not a cheerio-style parser) is the one that collects them.
 
 Per docs/03 Engine Categories: **gathers data only, never judges.** `validate()` always returns
-`[]`. The four uploadable artifacts (screenshot, DOM snapshot, console/network logs) go
-immediately to the private `evidence` Supabase Storage bucket via `uploadEvidence()`
+`[]`. The five uploadable artifacts (screenshot, DOM snapshot, CSS snapshot, console/network logs)
+go immediately to the private `evidence` Supabase Storage bucket via `uploadEvidence()`
 (`packages/core/src/storage.ts`) — docs/05: evidence lives in object storage, never as blobs in
 Postgres. Every screenshot is also recorded in `PageScreenshot` (`recordPageScreenshot()`,
 `packages/core/src/screenshot-history.ts`) independent of whether any Finding ever references it
@@ -27,10 +29,10 @@ as Evidence — the Visual Engine needs a page's screenshot history regardless o
 past audit found anything on it.
 
 The resulting storage paths, plus the raw DOM HTML, console/network text, and
-`domElements` (kept in memory for this run only — not uploaded, since nothing needs to cite them
-as a Finding's evidence yet), are written to `context.sharedResources.pageArtifacts[page.url]` for
-downstream engines (Content, Functional, Element Matching) to consume without re-fetching or
-re-rendering anything.
+`domElements` (kept in memory for this run only — not uploaded as its own artifact separately
+from the CSS snapshot, since nothing else needs it), are written to
+`context.sharedResources.pageArtifacts[page.url]` for downstream engines (Content, Functional,
+Element Matching) to consume without re-fetching or re-rendering anything.
 
 ## Known simplifications (flagged, not silent)
 
@@ -54,3 +56,8 @@ re-rendering anything.
 - `domElements` capture is capped at 500 elements per page and only records an element's *own*
   direct text (not descendants') to avoid capturing the same text once per ancestor container —
   a genuinely content-heavy page will have candidates silently dropped past the cap.
+- Computed-style capture is a **curated summary** (6 properties), not the full `CSSStyleDeclaration`
+  (hundreds of properties per element) — a full dump would be large and mostly noise. Nothing
+  consumes this yet (no engine does typography/color validation); it's collected ahead of that
+  need, matching how Figma Engine/Element Matching were built before UI Validation could fully use
+  them.

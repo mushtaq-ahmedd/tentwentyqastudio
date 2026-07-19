@@ -107,6 +107,16 @@
 > plus a bonus finding — Chromium itself logs resource-load failures to the console, so the
 > Console Error check picked up those too, not just the explicit one (a real, welcome signal, not
 > a bug).
+>
+> **Browser Engine also now extracts computed CSS** (docs/04 Browser Engine responsibility,
+> previously ungathered) — a curated 6-property summary (`color`, `backgroundColor`,
+> `fontFamily`, `fontSize`, `fontWeight`, `display`) per `domElements` entry, from
+> `getComputedStyle()` inside the real rendered page (can't be derived from static HTML), uploaded
+> as `CSS_SNAPSHOT` evidence. Closes the last gap in V1's Evidence Collection scope. Nothing
+> consumes it yet — no engine does typography/color validation — collected ahead of that need,
+> same as Figma Engine/Element Matching's data existing before UI Validation could fully use it.
+> Live-verified: three real audits' worth of CSS snapshot files (25-41KB of real JSON each,
+> correct mimetype) confirmed present in Storage, one per page.
 
 ## Architecture Philosophy
 
