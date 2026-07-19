@@ -10,16 +10,22 @@
 
 Renders one page in a real Chromium browser (Playwright) and captures the raw artifacts later
 Validation engines need to actually judge something: full-page screenshot, DOM/HTML snapshot,
-console messages (including uncaught page errors), and network activity (every response's
-status/method/URL, plus a filtered list of 4xx/5xx responses).
+console messages (including uncaught page errors), network activity (every response's
+status/method/URL, plus a filtered list of 4xx/5xx responses), and a structured list of rendered
+text-bearing elements (`domElements` — tag, own direct text, and real bounding box from
+`getBoundingClientRect()`) for the Element Matching Engine's text-matching candidates. Position
+data specifically requires a real rendered layout pass — it can't be derived from the static HTML
+snapshot alone, which is why this engine (not a cheerio-style parser) is the one that collects it.
 
 Per docs/03 Engine Categories: **gathers data only, never judges.** `validate()` always returns
-`[]`. All four artifacts are uploaded immediately to the private `evidence` Supabase Storage
-bucket via `uploadEvidence()` (`packages/core/src/storage.ts`) — docs/05: evidence lives in
-object storage, never as blobs in Postgres. The resulting storage paths, plus the raw DOM HTML
-and console/network text (kept in memory for this run only), are written to
-`context.sharedResources.pageArtifacts[page.url]` for downstream engines (Content, Functional, UI
-Validation) to consume without re-fetching anything.
+`[]`. The four uploadable artifacts (screenshot, DOM snapshot, console/network logs) go
+immediately to the private `evidence` Supabase Storage bucket via `uploadEvidence()`
+(`packages/core/src/storage.ts`) — docs/05: evidence lives in object storage, never as blobs in
+Postgres. The resulting storage paths, plus the raw DOM HTML, console/network text, and
+`domElements` (kept in memory for this run only — not uploaded, since nothing needs to cite them
+as a Finding's evidence yet), are written to `context.sharedResources.pageArtifacts[page.url]` for
+downstream engines (Content, Functional, Element Matching) to consume without re-fetching or
+re-rendering anything.
 
 ## Known simplifications (flagged, not silent)
 
@@ -40,3 +46,6 @@ Validation) to consume without re-fetching anything.
 - Sequential across pages, not parallel — see `packages/core/src/orchestrator.ts`'s
   `runPageScopedEngine`; same in-process interim simplification already flagged in docs/03 for the
   missing job queue.
+- `domElements` capture is capped at 500 elements per page and only records an element's *own*
+  direct text (not descendants') to avoid capturing the same text once per ancestor container —
+  a genuinely content-heavy page will have candidates silently dropped past the cap.

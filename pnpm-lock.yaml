@@ -38,6 +38,9 @@ importers:
       '@tentwenty/discovery-engine':
         specifier: workspace:*
         version: link:../../packages/engines/discovery-engine
+      '@tentwenty/element-matching-engine':
+        specifier: workspace:*
+        version: link:../../packages/engines/element-matching-engine
       '@tentwenty/figma-engine':
         specifier: workspace:*
         version: link:../../packages/engines/figma-engine
@@ -191,6 +194,25 @@ importers:
       '@types/node':
         specifier: ^20
         version: 20.19.43
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/engines/element-matching-engine:
+    dependencies:
+      '@tentwenty/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@tentwenty/db':
+        specifier: workspace:*
+        version: link:../../db
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.43
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.1
       typescript:
         specifier: ^5
         version: 5.9.3

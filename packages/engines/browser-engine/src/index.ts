@@ -4,6 +4,7 @@ import {
   TransientEngineError,
   uploadEvidence,
   type BrowserPageArtifacts,
+  type DomElement,
   type Engine,
   type EngineContext,
 } from "@tentwenty/core";
@@ -13,6 +14,40 @@ const NAVIGATION_TIMEOUT_MS = 15_000;
  * `networkidle`, which never resolves on pages with long-lived connections (analytics beacons,
  * websockets). Documented tradeoff, not an oversight — see README. */
 const SETTLE_MS = 1_000;
+/** Bound on how many text-bearing elements get captured per page (Element Matching's candidate
+ * pool) — a content-heavy page shouldn't produce unbounded data. */
+const MAX_DOM_ELEMENTS = 500;
+
+/**
+ * Runs inside the real rendered page (not static HTML parsing — position/size require an actual
+ * layout pass) to collect text-matching candidates for the Element Matching Engine: every
+ * element whose own direct text (not descendants') is non-empty and visible. Kept as a single
+ * self-contained function since Playwright serializes it into the page context.
+ */
+function collectDomElements(maxElements: number): DomElement[] {
+  const results: { tag: string; text: string; x: number; y: number; width: number; height: number }[] = [];
+  const all = document.querySelectorAll("body *");
+  for (const el of Array.from(all)) {
+    if (results.length >= maxElements) break;
+    let directText = "";
+    for (const node of Array.from(el.childNodes)) {
+      if (node.nodeType === Node.TEXT_NODE) directText += node.textContent ?? "";
+    }
+    directText = directText.trim().replace(/\s+/g, " ");
+    if (!directText) continue;
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) continue;
+    results.push({
+      tag: el.tagName.toLowerCase(),
+      text: directText.slice(0, 200),
+      x: Math.round(rect.x),
+      y: Math.round(rect.y),
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+    });
+  }
+  return results;
+}
 
 export const browserEngine: Engine = {
   id: "browser-engine",
@@ -62,6 +97,7 @@ export const browserEngine: Engine = {
 
       const screenshotBuffer = await browserPage.screenshot({ fullPage: true });
       const domHtml = await browserPage.content();
+      const domElements = await browserPage.evaluate(collectDomElements, MAX_DOM_ELEMENTS);
 
       const [screenshotPath, domSnapshotPath, consoleLogPath, networkLogPath] = await Promise.all([
         uploadEvidence(context.auditId, page.id, "screenshot", screenshotBuffer, "image/png"),
@@ -90,6 +126,7 @@ export const browserEngine: Engine = {
         domHtml,
         consoleMessages,
         networkErrors,
+        domElements,
       };
       context.sharedResources.pageArtifacts ??= {};
       context.sharedResources.pageArtifacts[page.url] = artifacts;

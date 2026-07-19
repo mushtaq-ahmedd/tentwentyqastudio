@@ -6,10 +6,14 @@
  * separate from the Orchestrator's own audit-coordination responsibilities.
  */
 import { prisma } from "@tentwenty/db";
-import { TransientEngineError, type FigmaFrame } from "./types";
+import { TransientEngineError, type FigmaElement, type FigmaFrame } from "./types";
 
 const FIGMA_TIMEOUT_MS = 15_000;
 const FIGMA_API_BASE = "https://api.figma.com/v1";
+/** Bounds on the recursive element walk (docs/04 Element Matching) — a large, deeply-nested file
+ * shouldn't produce unbounded data. Flagged in the Figma Engine README, not silent. */
+const MAX_ELEMENT_DEPTH = 8;
+const MAX_ELEMENTS = 1000;
 
 /** Figma file URLs look like `https://www.figma.com/design/<fileKey>/<name>` (current) or
  * `https://www.figma.com/file/<fileKey>/<name>` (older). */
@@ -47,14 +51,36 @@ type FigmaNode = {
   id: string;
   name: string;
   type: string;
+  characters?: string;
   absoluteBoundingBox?: { x: number; y: number; width: number; height: number } | null;
   children?: FigmaNode[];
 };
 
-/** Only top-level children of each Figma "page" (a CANVAS node) — see `FigmaFrame`'s doc comment
- * for why this doesn't recurse further yet. */
-function extractFrames(document: FigmaNode): FigmaFrame[] {
+/** Top-level children of each Figma "page" (a CANVAS node) become `FigmaFrame`s; every `TEXT`
+ * node found recursively inside one (bounded by `MAX_ELEMENT_DEPTH`/`MAX_ELEMENTS`) becomes a
+ * `FigmaElement` — the Element Matching Engine's primary signal (docs/04 "text" is the first
+ * matching criterion listed). */
+function extractDesignData(document: FigmaNode): { frames: FigmaFrame[]; elements: FigmaElement[] } {
   const frames: FigmaFrame[] = [];
+  const elements: FigmaElement[] = [];
+
+  function walk(node: FigmaNode, canvas: FigmaNode, frame: FigmaNode, depth: number) {
+    if (elements.length >= MAX_ELEMENTS || depth > MAX_ELEMENT_DEPTH) return;
+    if (node.type === "TEXT" && node.characters?.trim()) {
+      elements.push({
+        id: node.id,
+        name: node.name,
+        type: node.type,
+        text: node.characters.trim(),
+        figmaPageId: canvas.id,
+        figmaPageName: canvas.name,
+        parentFrameId: frame.id,
+        parentFrameName: frame.name,
+      });
+    }
+    for (const child of node.children ?? []) walk(child, canvas, frame, depth + 1);
+  }
+
   for (const canvas of document.children ?? []) {
     if (canvas.type !== "CANVAS") continue;
     for (const node of canvas.children ?? []) {
@@ -66,21 +92,23 @@ function extractFrames(document: FigmaNode): FigmaFrame[] {
         figmaPageId: canvas.id,
         figmaPageName: canvas.name,
       });
+      walk(node, canvas, node, 0);
     }
   }
-  return frames;
+  return { frames, elements };
 }
 
 /**
- * Returns the extracted frame/component structure for a project's Figma file, reusing the cached
- * copy whenever Figma reports no changes since the last fetch — checked via the cheap `/meta`
- * endpoint (a small JSON payload), never by re-downloading the full document just to compare.
+ * Returns the extracted frame/component + text-element structure for a project's Figma file,
+ * reusing the cached copy whenever Figma reports no changes since the last fetch — checked via
+ * the cheap `/meta` endpoint (a small JSON payload), never by re-downloading the full document
+ * just to compare.
  */
-export async function getFigmaFrames(
+export async function getFigmaDesignData(
   projectId: string,
   fileUrl: string,
   accessToken: string
-): Promise<FigmaFrame[]> {
+): Promise<{ frames: FigmaFrame[]; elements: FigmaElement[] }> {
   const fileKey = extractFigmaFileKey(fileUrl);
   if (!fileKey) throw new Error(`Could not parse a Figma file key from "${fileUrl}".`);
 
@@ -96,7 +124,10 @@ export async function getFigmaFrames(
     where: { projectId_fileKey: { projectId, fileKey } },
   });
   if (cached && cached.lastModified === lastModified) {
-    return cached.frames as unknown as FigmaFrame[];
+    return {
+      frames: cached.frames as unknown as FigmaFrame[],
+      elements: cached.elements as unknown as FigmaElement[],
+    };
   }
 
   const fileRes = await figmaFetch(`/files/${fileKey}`, accessToken);
@@ -105,15 +136,15 @@ export async function getFigmaFrames(
   if (!fileRes.ok) throw new TransientEngineError(`Figma file request failed: HTTP ${fileRes.status}`);
 
   const file = (await fileRes.json()) as { document: FigmaNode };
-  const frames = extractFrames(file.document);
+  const { frames, elements } = extractDesignData(file.document);
 
   await prisma.figmaFileCache.upsert({
     where: { projectId_fileKey: { projectId, fileKey } },
-    create: { projectId, fileKey, lastModified, frames: frames as never },
-    update: { lastModified, frames: frames as never, fetchedAt: new Date() },
+    create: { projectId, fileKey, lastModified, frames: frames as never, elements: elements as never },
+    update: { lastModified, frames: frames as never, elements: elements as never, fetchedAt: new Date() },
   });
 
-  return frames;
+  return { frames, elements };
 }
 
 /** Used by the "Connect Figma" flow to validate a token/file before saving — same auth/not-found

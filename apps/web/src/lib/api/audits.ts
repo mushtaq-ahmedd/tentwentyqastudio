@@ -87,6 +87,12 @@ export async function startAudit(input: {
     const engineNames = Array.from(
       new Set(input.validationTypes.map((v) => VALIDATION_TYPE_TO_ENGINE[v]))
     );
+    // Element Matching isn't a user-selectable ValidationType (docs/09) — it's the prerequisite
+    // step Figma Comparison needs (docs/04 "do not skip element matching to go straight to pixel
+    // diffing"), so it rides along whenever Figma Comparison was selected.
+    if (engineNames.includes("FIGMA") && !engineNames.includes("ELEMENT_MATCHING")) {
+      engineNames.push("ELEMENT_MATCHING");
+    }
 
     const created = await prisma.audit.create({
       data: {

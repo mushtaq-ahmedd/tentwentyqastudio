@@ -18,8 +18,9 @@ Fetches the project's connected Figma file (`Project.figmaFileUrl` + `Project.fi
 read via `context.configuration` — the Orchestrator populates this from the Project row so the
 engine never queries the DB directly for it, per docs/03's "Engines... only from the shared input
 the Core Platform provides"), extracts every top-level frame/component from each Figma page
-(a CANVAS node), and stores the result in `sharedResources.figmaFrames` for the (not yet built)
-Element Matching Engine to consume.
+(a CANVAS node) into `sharedResources.figmaFrames`, and recursively walks each frame for
+text-bearing (`TEXT` type) descendant nodes into `sharedResources.figmaElements` — the Element
+Matching Engine's primary matching signal (docs/04 lists "text" first among matching criteria).
 
 Like every other Collection engine, it **gathers data only — it never judges**. `validate()`
 always returns `[]`.
@@ -31,10 +32,12 @@ document (which can be several MB for a complex file), the engine calls Figma's 
 `GET /v1/files/:key/meta` endpoint and compares its `last_touched_at` timestamp against the
 project's last cached value (`FigmaFileCache` — a Postgres table, since no Redis/cache
 infrastructure is provisioned yet; same interim-simplification pattern as the Orchestrator's
-missing job queue). Only on a genuine mismatch does it fetch the full file and re-extract frames.
-The cache stores the **extracted** frame/component summary, not Figma's raw document tree — "
-prepare design data for comparison" (docs/04) implies a distilled structure, not an archived copy
-of the original file.
+missing job queue). Only on a genuine mismatch does it fetch the full file and re-extract frames
+and elements. The cache stores the **extracted** frame/component/element summary, not Figma's raw
+document tree — "prepare design data for comparison" (docs/04) implies a distilled structure, not
+an archived copy of the original file. The recursive element walk is bounded (depth 8, 1000
+elements — `packages/core/src/figma-cache.ts`) so a large, deeply-nested file can't produce
+unbounded cached data.
 
 ## Errors
 
@@ -46,10 +49,10 @@ of the original file.
 
 ## Known simplifications (flagged, not silent)
 
-- Only extracts **top-level** frames/components per Figma page — doesn't recurse into a frame's
-  full nested layer tree (text nodes, nested groups, instances). Deferred until the Element
-  Matching Engine actually needs that depth; extracting and caching a full deep tree today would
-  mean storing a lot of data nothing yet reads.
+- Only captures `TEXT`-type descendant nodes recursively — non-text nodes (rectangles, vectors,
+  images, component instances with no text) aren't extracted at all yet. Fine for the Element
+  Matching Engine's current text-only matching signal; will need extending once position/size/
+  visual-similarity matching is attempted (see the Element Matching Engine's README).
 - One Figma file per project (`Project.figmaFileUrl`/`figmaAccessToken` are single fields) — no
   support for multiple Figma files or per-environment Figma files.
 - `Project.figmaAccessToken` is stored as a plain string column — no real encryption-at-rest,

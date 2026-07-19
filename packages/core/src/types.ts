@@ -25,6 +25,8 @@ export type BrowserPageArtifacts = {
   domHtml: string;
   consoleMessages: string[];
   networkErrors: string[];
+  /** Real rendered elements (via `getBoundingClientRect()`), for the Element Matching Engine. */
+  domElements: DomElement[];
 };
 
 /**
@@ -45,8 +47,7 @@ export type BrokenLink = {
  * One top-level frame or component extracted from a Figma file (docs/04 Figma Engine: "extract
  * frames/components, prepare design data for comparison"). Only top-level nodes within each
  * Figma "page" (a CANVAS node — Figma's own term, unrelated to our `Page`/website-page model) are
- * captured; the full recursive node tree inside a frame is deferred until the Element Matching
- * Engine actually needs it (not built yet).
+ * captured here; text-bearing descendants used for matching are `FigmaElement`, below.
  */
 export type FigmaFrame = {
   id: string;
@@ -56,6 +57,36 @@ export type FigmaFrame = {
   /** The Figma CANVAS (page) this frame belongs to — distinct from our own Page model. */
   figmaPageId: string;
   figmaPageName: string;
+};
+
+/**
+ * One text-bearing node found anywhere inside a Figma frame (docs/04 Element Matching: "text" is
+ * the first/primary matching signal). Only `TEXT` nodes with non-empty `characters` are captured
+ * — see the Figma Engine README for why position/size/visual-similarity signals aren't attempted
+ * yet. Recursion depth and total element count are capped (see `figma-cache.ts`) so a large,
+ * deeply-nested file can't produce unbounded data.
+ */
+export type FigmaElement = {
+  id: string;
+  name: string;
+  type: string;
+  text: string;
+  figmaPageId: string;
+  figmaPageName: string;
+  parentFrameId: string;
+  parentFrameName: string;
+};
+
+/** One rendered DOM element the Browser Engine captured as a text-matching candidate — real
+ * layout data from `getBoundingClientRect()` inside the actual browser, not parsed from static
+ * HTML (position/size can't be known without a real layout pass). */
+export type DomElement = {
+  tag: string;
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 };
 
 /**
@@ -69,10 +100,28 @@ export type SharedResources = {
   pageArtifacts?: Record<string, BrowserPageArtifacts>;
   /** Populated by the Discovery Engine while crawling — read by the Functional Engine. */
   brokenLinks?: BrokenLink[];
-  /** Populated by the Figma Engine — read by the (not yet built) Element Matching Engine. */
+  /** Populated by the Figma Engine — read by the Element Matching Engine. */
   figmaFrames?: FigmaFrame[];
+  figmaElements?: FigmaElement[];
+  /** Populated by the Element Matching Engine — read by the (not yet built) UI Validation Engine. */
+  elementMatches?: ElementMatch[];
   [key: string]: unknown;
 };
+
+/** One Figma element matched (or not) to a rendered DOM element on a specific page — the output
+ * of the Element Matching Engine, docs/04's prerequisite step "before comparing pixels or
+ * attributes." `matched: false` means no DOM element scored above the confidence threshold — not
+ * itself a Finding (Element Matching prepares data, it doesn't judge, docs/03); the not-yet-built
+ * UI Validation Engine decides what an unmatched element means. */
+export type ElementMatch = {
+  pageUrl: string;
+  figmaElementId: string;
+  figmaElementName: string;
+  figmaText: string;
+} & (
+  | { matched: true; domText: string; domTag: string; confidence: number }
+  | { matched: false }
+);
 
 /** Engine Input (docs/03) — the common shape every Engine receives. */
 export type EngineContext = {

@@ -41,6 +41,21 @@
 > Engine's `EngineResult` row is created at audit-start and stays `WAITING` — the Orchestrator
 > deliberately leaves the audit honestly `RUNNING` rather than faking a `COMPLETED` pipeline that
 > didn't actually validate anything.
+>
+> **Element Matching** (`element-matching-engine`) also exists now — docs/08 calls this "one of
+> the most important systems in the platform," and this first slice implements exactly one of its
+> six documented matching signals (text — a Levenshtein similarity ratio), not all of them.
+> Position/size need Figma-frame-space-to-viewport-space coordinate reconciliation that isn't
+> built; component-type/accessibility-role need a real Figma-type-to-DOM-tag mapping that isn't
+> built; visual similarity needs the Visual Engine's image-diffing tech, which doesn't exist yet
+> either. All three are real gaps, sequenced for later, not corners cut silently — see the
+> engine's README. It isn't a user-selectable `ValidationType`; it rides along whenever `Figma
+> Comparison` is selected, same treatment as Discovery/Browser always running. Its matching
+> *algorithm* is verified against synthetic fixtures
+> (`packages/engines/element-matching-engine/src/matching.verify.ts`, run manually — no test
+> runner is wired up in this repo yet); the full engine against a real Figma file/rendered page is
+> not, for the same reason the Figma Engine's success path isn't (needs a real Figma personal
+> access token, not supplied yet).
 
 ## Architecture Philosophy
 

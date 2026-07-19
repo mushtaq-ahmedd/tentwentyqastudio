@@ -1,4 +1,4 @@
-import { registerEngine, getFigmaFrames, type Engine, type EngineContext } from "@tentwenty/core";
+import { registerEngine, getFigmaDesignData, type Engine, type EngineContext } from "@tentwenty/core";
 
 export const figmaEngine: Engine = {
   id: "figma-engine",
@@ -20,7 +20,9 @@ export const figmaEngine: Engine = {
       );
     }
 
-    context.sharedResources.figmaFrames = await getFigmaFrames(context.projectId, fileUrl, accessToken);
+    const { frames, elements } = await getFigmaDesignData(context.projectId, fileUrl, accessToken);
+    context.sharedResources.figmaFrames = frames;
+    context.sharedResources.figmaElements = elements;
   },
 
   async validate() {
