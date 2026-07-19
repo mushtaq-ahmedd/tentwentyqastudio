@@ -20,6 +20,33 @@ const DEFAULT_MAX_RETRIES = 2;
  * engines make a single request-lifetime execution impractical.
  */
 export async function runAudit(auditId: string): Promise<void> {
+  try {
+    await runAuditInner(auditId);
+  } catch (err) {
+    // Any unhandled error here (a transient DB connection blip was observed live, docs/03's
+    // "Partial Failure Is Acceptable, Total Failure Is Not" applies to the audit as a whole too)
+    // previously left the audit silently stuck at RUNNING forever, with no way to tell it had
+    // died. Best-effort mark it FAILED instead — if the DB is still unreachable this update can
+    // also fail, but the audit was going to be stuck regardless; no way to make this bulletproof
+    // without a real job queue (already flagged above as an interim simplification).
+    console.error(`Audit ${auditId} crashed unexpectedly:`, err);
+    try {
+      await prisma.audit.update({
+        where: { id: auditId },
+        data: {
+          status: "FAILED",
+          endedAt: new Date(),
+          currentEngine: null,
+          currentActivity: "Audit crashed unexpectedly — see server logs.",
+        },
+      });
+    } catch (updateErr) {
+      console.error(`Failed to mark audit ${auditId} as FAILED after crash:`, updateErr);
+    }
+  }
+}
+
+async function runAuditInner(auditId: string): Promise<void> {
   const audit = await prisma.audit.findUnique({
     where: { id: auditId },
     include: { environment: true, engineResults: true, project: true },

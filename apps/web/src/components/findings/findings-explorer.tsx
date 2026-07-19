@@ -58,8 +58,12 @@ export function FindingsExplorer({
 
   async function handleStatus(id: string, status: FindingStatus) {
     const result = await setFindingStatusAction(id, status);
-    if (result.success) toast.success(result.message);
-    else toast.error(result.error.message);
+    if (result.success) {
+      toast.success(result.message);
+      router.refresh();
+    } else {
+      toast.error(result.error.message);
+    }
   }
 
   async function handleBulkStatus(status: FindingStatus) {
@@ -68,6 +72,7 @@ export function FindingsExplorer({
     if (result.success) {
       toast.success(result.message);
       setSelected(new Set());
+      router.refresh();
     } else {
       toast.error(result.error.message);
     }
@@ -85,6 +90,7 @@ export function FindingsExplorer({
         if (result.success) {
           toast.success(result.message);
           setSelected(new Set());
+          router.refresh();
         } else {
           toast.error(result.error.message);
         }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { projectsApi } from "@/lib/api";
 import type { ApiResponse, Project } from "@/lib/types";
+import type { ProjectConfigOverrideInput } from "@/lib/api/projects";
 
 export async function createProjectAction(input: {
   name: string;
@@ -12,6 +13,21 @@ export async function createProjectAction(input: {
   const result = await projectsApi.createProject(input);
   revalidatePath("/projects");
   revalidatePath("/dashboard");
+  return result;
+}
+
+export async function updateProjectAction(
+  input: {
+    projectId: string;
+    name: string;
+    description: string;
+    clientName: string;
+  } & ProjectConfigOverrideInput
+): Promise<ApiResponse<Project>> {
+  const result = await projectsApi.updateProject(input);
+  revalidatePath(`/projects/${input.projectId}`);
+  revalidatePath(`/projects/${input.projectId}/settings`);
+  revalidatePath("/projects");
   return result;
 }
 

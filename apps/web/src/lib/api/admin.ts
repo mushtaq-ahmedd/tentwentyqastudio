@@ -1,6 +1,7 @@
 import { prisma } from "@tentwenty/db";
 import type { AdminUser, ApiResponse, UserRole } from "@/lib/types";
 import { requireAdministrator, requireUser } from "@/lib/auth/session";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { fail, guarded, ok } from "./client";
 import { toAdminUser, USER_ROLE_TO_DB } from "./mappers";
 
@@ -13,10 +14,14 @@ export async function fetchAdminUsers(): Promise<ApiResponse<AdminUser[]>> {
 }
 
 /**
- * Scope for this pass: creates the public.users profile row directly (status INVITED). It does
- * NOT yet call Supabase Auth's inviteUserByEmail() admin API to actually send an invite email or
- * create a real login-capable account — see packages/db/prisma/triggers/auth_user_sync.sql's
- * comment for why. Follow-up, not done here.
+ * Real invite flow: calls Supabase Auth's inviteUserByEmail() admin API, which creates a real
+ * auth.users row and sends the actual invite email. packages/db/prisma/triggers/
+ * auth_user_sync.sql's trigger then creates the matching public.users profile row automatically
+ * (same trigger self-service signup uses) — but it always defaults to role QA_ENGINEER and
+ * status ACTIVE, since it has no way to know this was an admin invite with a specific role. So
+ * this immediately updates that row to the requested role and status INVITED once the trigger
+ * has run (both happen inside the same auth.users insert transaction the admin API call awaits,
+ * so the row is guaranteed to exist by the time inviteUserByEmail() resolves).
  */
 export async function inviteUser(input: {
   name: string;
@@ -30,10 +35,17 @@ export async function inviteUser(input: {
     const existing = await prisma.user.findUnique({ where: { email: input.email } });
     if (existing) return fail("VALIDATION_ERROR", "A user with that email already exists.");
 
-    const user = await prisma.user.create({
+    const { data, error } = await supabaseAdmin().auth.admin.inviteUserByEmail(input.email, {
+      data: { name: input.name || undefined },
+    });
+    if (error || !data.user) {
+      return fail("INVITE_FAILED", error?.message ?? "Failed to send invite.");
+    }
+
+    const user = await prisma.user.update({
+      where: { id: data.user.id },
       data: {
-        name: input.name || "New User",
-        email: input.email,
+        name: input.name || undefined,
         role: USER_ROLE_TO_DB[input.role],
         status: "INVITED",
       },

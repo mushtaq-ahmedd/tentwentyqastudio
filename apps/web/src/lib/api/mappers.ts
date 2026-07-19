@@ -192,6 +192,10 @@ export function toProject(p: ProjectWithAggregates): Project {
     lastReportAt: p.lastReportAt?.toISOString() ?? null,
     totalFindings: p.totalFindings,
     criticalFindings: p.criticalFindings,
+    screenshotQuality: (p.screenshotQuality as "High" | "Medium" | null) ?? null,
+    defaultTimeoutSeconds: p.defaultTimeoutSeconds,
+    retryCount: p.retryCount,
+    defaultViewport: p.defaultViewport,
   };
 }
 

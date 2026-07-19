@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import type { Environment } from "@/lib/types";
 
 export function EnvironmentsGrid({ projectId, environments }: { projectId: string; environments: Environment[] }) {
   const { openModal, openConfirm } = useUI();
+  const router = useRouter();
 
   return (
     <div className="flex flex-col gap-4">
@@ -47,7 +49,7 @@ export function EnvironmentsGrid({ projectId, environments }: { projectId: strin
                 <Button
                   variant="secondary"
                   className="flex-1 justify-center"
-                  onClick={() => toast(`Opens edit panel for ${env.name}`)}
+                  onClick={() => openModal("edit-environment", { projectId, environment: env })}
                 >
                   Edit
                 </Button>
@@ -68,8 +70,12 @@ export function EnvironmentsGrid({ projectId, environments }: { projectId: strin
                       danger: true,
                       onConfirm: async () => {
                         const result = await deleteEnvironmentAction(projectId, env.id);
-                        if (result.success) toast.success(result.message);
-                        else toast.error(result.error.message);
+                        if (result.success) {
+                          toast.success(result.message);
+                          router.refresh();
+                        } else {
+                          toast.error(result.error.message);
+                        }
                       },
                     })
                   }

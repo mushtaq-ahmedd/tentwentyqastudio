@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -32,6 +33,7 @@ export function UploadKnowledgeSourceModal({
   initialMethod?: "file" | "text";
 }) {
   const { closeModal } = useUI();
+  const router = useRouter();
   const [method, setMethod] = React.useState<"file" | "text">(initialMethod);
   const [type, setType] = React.useState<KnowledgeSourceType>("Requirements Document");
   const [filename, setFilename] = React.useState("");
@@ -74,6 +76,7 @@ export function UploadKnowledgeSourceModal({
     }
     toast.success(result.message);
     closeModal();
+    router.refresh();
   }
 
   return (

@@ -2,15 +2,24 @@
 
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatDurationSeconds } from "@/lib/format";
-import type { Audit, Finding } from "@/lib/types";
+import type { Audit, Finding, Report, ReportType } from "@/lib/types";
 
 const SEVERITIES = ["critical", "high", "medium", "low"] as const;
 
-export function ReportsView({ audit, findings }: { audit: Audit | null; findings: Finding[] }) {
+export function ReportsView({
+  audit,
+  findings,
+  reports,
+}: {
+  audit: Audit | null;
+  findings: Finding[];
+  reports: Report[];
+}) {
   if (!audit) {
     return (
       <EmptyState
@@ -58,7 +67,7 @@ export function ReportsView({ audit, findings }: { audit: Audit | null; findings
                 </div>
               ))}
             </div>
-            <ReportActions />
+            <ReportActions reportType="developer" reports={reports} />
           </CardContent>
         </Card>
       </TabsContent>
@@ -78,7 +87,7 @@ export function ReportsView({ audit, findings }: { audit: Audit | null; findings
                 {audit.severityCounts.critical > 0 ? "Not Recommended" : "Recommended"}
               </Badge>
             </div>
-            <ReportActions />
+            <ReportActions reportType="management" reports={reports} />
           </CardContent>
         </Card>
       </TabsContent>
@@ -104,7 +113,7 @@ export function ReportsView({ audit, findings }: { audit: Audit | null; findings
               <span className="text-text-secondary">Recommendation</span>
               <span>{audit.severityCounts.critical > 0 ? "Hold release until critical findings are fixed" : "Safe to proceed"}</span>
             </div>
-            <ReportActions />
+            <ReportActions reportType="executive" reports={reports} />
           </CardContent>
         </Card>
       </TabsContent>
@@ -121,12 +130,37 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function ReportActions() {
+/**
+ * Wired to real Report Engine output: each tab's "Download PDF" links to the matching-type PDF
+ * (`Report.type` === this tab), and "Export CSV" links to the audit's Findings CSV — the only
+ * export format Report Engine actually produces (there is no HTML report, so a previous
+ * "Export HTML" button was replaced rather than left pointing at nothing). "Print" uses the
+ * browser's own print dialog, a real zero-backend action.
+ */
+function ReportActions({ reportType, reports }: { reportType: ReportType; reports: Report[] }) {
+  const pdf = reports.find((r) => r.type === reportType && r.format === "pdf");
+  const csv = reports.find((r) => r.format === "csv");
+  const disabledLinkClass = "pointer-events-none opacity-45";
+
   return (
     <div className="mt-5 flex gap-2">
-      <Button variant="secondary">Download PDF</Button>
-      <Button variant="secondary">Export HTML</Button>
-      <Button variant="outline">Print</Button>
+      {pdf?.downloadUrl ? (
+        <a href={pdf.downloadUrl} target="_blank" rel="noreferrer" className={cn(buttonVariants({ variant: "secondary" }))}>
+          Download PDF
+        </a>
+      ) : (
+        <span className={cn(buttonVariants({ variant: "secondary" }), disabledLinkClass)}>Download PDF</span>
+      )}
+      {csv?.downloadUrl ? (
+        <a href={csv.downloadUrl} download className={cn(buttonVariants({ variant: "secondary" }))}>
+          Export CSV
+        </a>
+      ) : (
+        <span className={cn(buttonVariants({ variant: "secondary" }), disabledLinkClass)}>Export CSV</span>
+      )}
+      <Button variant="outline" onClick={() => window.print()}>
+        Print
+      </Button>
     </div>
   );
 }

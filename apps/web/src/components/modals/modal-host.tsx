@@ -1,8 +1,10 @@
 "use client";
 
 import { useUI } from "@/components/shell/ui-provider";
+import type { Environment } from "@/lib/types";
 import { CreateProjectModal } from "./create-project-modal";
 import { AddEnvironmentModal } from "./add-environment-modal";
+import { EditEnvironmentModal } from "./edit-environment-modal";
 import { UploadKnowledgeSourceModal } from "./upload-knowledge-source-modal";
 import { InviteUserModal } from "./invite-user-modal";
 import { ConnectFigmaModal } from "./connect-figma-modal";
@@ -24,6 +26,12 @@ export function ModalHost() {
         key={openKey("add-environment")}
         open={modal?.name === "add-environment"}
         projectId={modal?.payload?.projectId as string | undefined}
+      />
+      <EditEnvironmentModal
+        key={openKey("edit-environment")}
+        open={modal?.name === "edit-environment"}
+        projectId={modal?.payload?.projectId as string | undefined}
+        environment={modal?.payload?.environment as Environment | undefined}
       />
       <UploadKnowledgeSourceModal
         key={openKey("upload-knowledge-source")}

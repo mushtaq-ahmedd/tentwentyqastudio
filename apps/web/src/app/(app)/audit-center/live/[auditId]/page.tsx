@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { SetHeader } from "@/components/shell/set-header";
 import { LiveAuditView } from "@/components/audit/live-audit-view";
 import { auditsApi, findingsApi } from "@/lib/api";
+
+export const metadata: Metadata = { title: "Live Audit" };
 
 export default async function LiveAuditPage({
   params,

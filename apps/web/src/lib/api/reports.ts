@@ -5,11 +5,14 @@ import { requireUser } from "@/lib/auth/session";
 import { guarded, ok } from "./client";
 import { toReport, type ReportWithProject } from "./mappers";
 
-export async function fetchReports(projectId?: string): Promise<ApiResponse<Report[]>> {
+export async function fetchReports(filter?: { projectId?: string; auditId?: string }): Promise<ApiResponse<Report[]>> {
   return guarded(async () => {
     await requireUser();
     const rows = await prisma.report.findMany({
-      where: projectId ? { projectId } : undefined,
+      where: {
+        ...(filter?.projectId ? { projectId: filter.projectId } : {}),
+        ...(filter?.auditId ? { auditId: filter.auditId } : {}),
+      },
       include: { project: true, generatedBy: true },
       orderBy: { generatedAt: "desc" },
     });

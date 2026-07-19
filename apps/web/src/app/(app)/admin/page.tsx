@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { Plus } from "lucide-react";
 import { SetHeader } from "@/components/shell/set-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { AdminUsersTable } from "@/components/admin/admin-users-table";
 import { adminApi } from "@/lib/api";
+
+export const metadata: Metadata = { title: "Administration" };
 
 export default async function AdminPage() {
   const res = await adminApi.fetchAdminUsers();

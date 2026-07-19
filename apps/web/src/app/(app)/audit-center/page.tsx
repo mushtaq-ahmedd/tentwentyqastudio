@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { SetHeader } from "@/components/shell/set-header";
 import { AuditConfigForm } from "@/components/audit/audit-config-form";
 import { environmentsApi, projectsApi } from "@/lib/api";
+
+export const metadata: Metadata = { title: "Audit Center" };
 
 export default async function AuditCenterPage({
   searchParams,

@@ -50,17 +50,28 @@ export async function addEnvironment(
   });
 }
 
-export async function updateEnvironmentConfig(
+export async function updateEnvironment(
   environmentId: string,
-  patch: EnvironmentConfigOverrideInput
+  patch: {
+    name?: string;
+    url?: string;
+    loginUrl?: string | null;
+    notes?: string;
+  } & EnvironmentConfigOverrideInput
 ): Promise<ApiResponse<Environment>> {
   return guarded(async () => {
     await requireNotViewer();
+    if (patch.name !== undefined && !patch.name.trim()) {
+      return fail("VALIDATION_ERROR", "Environment name is required.");
+    }
+    if (patch.url !== undefined && !patch.url.trim()) {
+      return fail("VALIDATION_ERROR", "Environment URL is required.");
+    }
     const env = await prisma.environment.update({
       where: { id: environmentId },
       data: patch,
     });
-    return ok(toEnvironment(env), "Environment configuration updated.");
+    return ok(toEnvironment(env), "Environment updated successfully.");
   });
 }
 

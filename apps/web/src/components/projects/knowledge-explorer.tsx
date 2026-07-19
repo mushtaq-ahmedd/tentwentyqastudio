@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { FileText, Sheet, ListChecks, Shapes } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ const ICON_MAP: Record<KnowledgeSource["icon"], React.ComponentType<{ className?
 
 export function KnowledgeExplorer({ projectId, sources }: { projectId: string; sources: KnowledgeSource[] }) {
   const { openModal, openConfirm } = useUI();
+  const router = useRouter();
   const [selectedId, setSelectedId] = React.useState<string | null>(sources[0]?.id ?? null);
   const selected = sources.find((s) => s.id === selectedId) ?? sources[0] ?? null;
 
@@ -135,6 +137,7 @@ export function KnowledgeExplorer({ projectId, sources }: { projectId: string; s
                     if (result.success) {
                       toast.success(result.message);
                       setSelectedId(null);
+                      router.refresh();
                     } else {
                       toast.error(result.error.message);
                     }

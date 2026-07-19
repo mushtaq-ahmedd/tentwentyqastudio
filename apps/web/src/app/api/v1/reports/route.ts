@@ -4,5 +4,6 @@ import { respond } from "@/lib/api/http";
 
 export async function GET(request: NextRequest) {
   const projectId = request.nextUrl.searchParams.get("projectId") ?? undefined;
-  return respond(await reportsApi.fetchReports(projectId));
+  const auditId = request.nextUrl.searchParams.get("auditId") ?? undefined;
+  return respond(await reportsApi.fetchReports({ projectId, auditId }));
 }

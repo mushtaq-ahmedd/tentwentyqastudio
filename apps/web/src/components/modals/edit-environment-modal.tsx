@@ -17,27 +17,40 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUI } from "@/components/shell/ui-provider";
-import { addEnvironmentAction } from "@/app/actions/environments";
+import { updateEnvironmentAction } from "@/app/actions/environments";
+import type { Environment } from "@/lib/types";
 
 const VIEWPORT_OPTIONS = ["Desktop (1440x900)", "Laptop (1280x800)", "Tablet (768x1024)", "Mobile (375x667)"];
 
-export function AddEnvironmentModal({ open, projectId }: { open: boolean; projectId?: string }) {
+export function EditEnvironmentModal({
+  open,
+  projectId,
+  environment,
+}: {
+  open: boolean;
+  projectId?: string;
+  environment?: Environment;
+}) {
   const { closeModal } = useUI();
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
-  const [form, setForm] = React.useState({ name: "", url: "", loginUrl: "", notes: "" });
+  const [form, setForm] = React.useState({
+    name: environment?.name ?? "",
+    url: environment?.url ?? "",
+    loginUrl: environment?.loginUrl ?? "",
+    notes: environment?.notes ?? "",
+  });
   const [overrides, setOverrides] = React.useState({
-    screenshotQuality: "",
-    defaultTimeoutSeconds: "",
-    retryCount: "",
-    defaultViewport: "",
+    screenshotQuality: environment?.screenshotQuality ?? "",
+    defaultTimeoutSeconds: environment?.defaultTimeoutSeconds != null ? String(environment.defaultTimeoutSeconds) : "",
+    retryCount: environment?.retryCount != null ? String(environment.retryCount) : "",
+    defaultViewport: environment?.defaultViewport ?? "",
   });
 
   async function handleSave() {
-    if (!projectId) return;
+    if (!projectId || !environment) return;
     setPending(true);
-    const result = await addEnvironmentAction({
-      projectId,
+    const result = await updateEnvironmentAction(projectId, environment.id, {
       ...form,
       screenshotQuality: overrides.screenshotQuality ? (overrides.screenshotQuality as "High" | "Medium") : null,
       defaultTimeoutSeconds: overrides.defaultTimeoutSeconds ? Number(overrides.defaultTimeoutSeconds) : null,
@@ -58,7 +71,7 @@ export function AddEnvironmentModal({ open, projectId }: { open: boolean; projec
     <Dialog open={open} onOpenChange={(next) => !next && closeModal()}>
       <DialogContent showCloseButton>
         <DialogHeader>
-          <DialogTitle>Add Environment</DialogTitle>
+          <DialogTitle>Edit Environment</DialogTitle>
         </DialogHeader>
         <DialogBody>
           <div className="flex flex-col gap-1.5">
@@ -84,16 +97,6 @@ export function AddEnvironmentModal({ open, projectId }: { open: boolean; projec
               value={form.loginUrl}
               onChange={(e) => setForm((f) => ({ ...f, loginUrl: e.target.value }))}
             />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <Label>Username</Label>
-              <Input placeholder="qa-bot@acmecorp.com" />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label>Password</Label>
-              <Input type="password" placeholder="••••••••" />
-            </div>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Notes</Label>
@@ -161,13 +164,10 @@ export function AddEnvironmentModal({ open, projectId }: { open: boolean; projec
           </div>
         </DialogBody>
         <DialogFooter>
-          <Button variant="text" onClick={() => toast.success("Connection verified.")}>
-            Test Connection
-          </Button>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={closeModal}>Cancel</Button>
             <Button onClick={handleSave} disabled={pending}>
-              {pending ? "Saving…" : "Save Environment"}
+              {pending ? "Saving…" : "Save Changes"}
             </Button>
           </div>
         </DialogFooter>

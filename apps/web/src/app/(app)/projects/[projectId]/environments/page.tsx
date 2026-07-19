@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { EnvironmentsGrid } from "@/components/projects/environments-grid";
 import { environmentsApi } from "@/lib/api";
+
+export const metadata: Metadata = { title: "Environments" };
 
 export default async function ProjectEnvironmentsPage({
   params,

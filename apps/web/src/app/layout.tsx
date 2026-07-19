@@ -17,7 +17,10 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "tentwenty QA Studio",
+  title: {
+    default: "tentwenty QA Studio",
+    template: "%s · tentwenty QA Studio",
+  },
   description: "AI-assisted QA Operating System",
 };
 

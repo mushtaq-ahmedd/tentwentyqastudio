@@ -4,6 +4,13 @@ export const PROJECT_ACME = "proj-acme";
 export const PROJECT_NORTHWIND = "proj-northwind";
 export const PROJECT_FENWICK = "proj-fenwick";
 
+const NO_OVERRIDES = {
+  screenshotQuality: null,
+  defaultTimeoutSeconds: null,
+  retryCount: null,
+  defaultViewport: null,
+} as const;
+
 export let PROJECTS: Project[] = [
   {
     id: PROJECT_ACME,
@@ -20,6 +27,7 @@ export let PROJECTS: Project[] = [
     lastReportAt: "2026-07-16T10:00:00Z",
     totalFindings: 31,
     criticalFindings: 3,
+    ...NO_OVERRIDES,
   },
   {
     id: PROJECT_NORTHWIND,
@@ -36,6 +44,7 @@ export let PROJECTS: Project[] = [
     lastReportAt: null,
     totalFindings: 8,
     criticalFindings: 1,
+    ...NO_OVERRIDES,
   },
   {
     id: PROJECT_FENWICK,
@@ -52,6 +61,7 @@ export let PROJECTS: Project[] = [
     lastReportAt: "2026-07-12T08:30:00Z",
     totalFindings: 6,
     criticalFindings: 0,
+    ...NO_OVERRIDES,
   },
 ];
 
@@ -75,6 +85,7 @@ export function createProject(input: {
     lastReportAt: null,
     totalFindings: 0,
     criticalFindings: 0,
+    ...NO_OVERRIDES,
   };
   PROJECTS = [...PROJECTS, project];
   return project;

@@ -19,12 +19,17 @@ export async function addEnvironmentAction(
   return result;
 }
 
-export async function updateEnvironmentConfigAction(
+export async function updateEnvironmentAction(
   projectId: string,
   environmentId: string,
-  patch: EnvironmentConfigOverrideInput
+  patch: {
+    name?: string;
+    url?: string;
+    loginUrl?: string | null;
+    notes?: string;
+  } & EnvironmentConfigOverrideInput
 ): Promise<ApiResponse<Environment>> {
-  const result = await environmentsApi.updateEnvironmentConfig(environmentId, patch);
+  const result = await environmentsApi.updateEnvironment(environmentId, patch);
   revalidatePath(`/projects/${projectId}`);
   return result;
 }

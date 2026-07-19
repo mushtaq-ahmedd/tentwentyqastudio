@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { reportsApi } from "@/lib/api";
 import { formatRelativeTime } from "@/lib/format";
+
+export const metadata: Metadata = { title: "Project Reports" };
 
 export default async function ProjectReportsPage({
   params,
@@ -9,7 +12,7 @@ export default async function ProjectReportsPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  const res = await reportsApi.fetchReports(projectId);
+  const res = await reportsApi.fetchReports({ projectId });
   if (!res.success) throw new Error(res.error.message);
 
   return (

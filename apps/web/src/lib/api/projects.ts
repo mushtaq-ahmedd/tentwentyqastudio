@@ -101,6 +101,42 @@ export async function createProject(input: {
   });
 }
 
+export type ProjectConfigOverrideInput = {
+  screenshotQuality?: "High" | "Medium" | null;
+  defaultTimeoutSeconds?: number | null;
+  retryCount?: number | null;
+  defaultViewport?: string | null;
+};
+
+export async function updateProject(
+  input: {
+    projectId: string;
+    name: string;
+    description: string;
+    clientName: string;
+  } & ProjectConfigOverrideInput
+): Promise<ApiResponse<Project>> {
+  return guarded(async () => {
+    await requireNotViewer();
+    if (!input.name.trim()) return fail("VALIDATION_ERROR", "Project name is required.");
+
+    const project = await prisma.project.update({
+      where: { id: input.projectId },
+      data: {
+        name: input.name,
+        description: input.description,
+        clientName: input.clientName,
+        screenshotQuality: input.screenshotQuality,
+        defaultTimeoutSeconds: input.defaultTimeoutSeconds,
+        retryCount: input.retryCount,
+        defaultViewport: input.defaultViewport,
+      },
+    });
+    const [withAgg] = await withAggregates([project]);
+    return ok(toProject(withAgg), "Project settings saved.");
+  });
+}
+
 /**
  * Real "Connect Figma" flow — replaces the earlier hardcoded stub. Verifies the token/file are
  * actually valid against the real Figma API *before* persisting anything (same "Test Connection"

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { StatusChip } from "@/components/ui/status-chip";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -10,6 +11,7 @@ import type { AdminUser } from "@/lib/types";
 
 export function AdminUsersTable({ users }: { users: AdminUser[] }) {
   const { openConfirm } = useUI();
+  const router = useRouter();
 
   if (users.length === 0) {
     return <EmptyState title="No users yet" description="Invite teammates so they can start reviewing audits with you." />;
@@ -51,8 +53,12 @@ export function AdminUsersTable({ users }: { users: AdminUser[] }) {
                 className="font-medium text-accent-default hover:underline"
                 onClick={async () => {
                   const result = await toggleUserStatusAction(u.id);
-                  if (result.success) toast.success(result.message);
-                  else toast.error(result.error.message);
+                  if (result.success) {
+                    toast.success(result.message);
+                    router.refresh();
+                  } else {
+                    toast.error(result.error.message);
+                  }
                 }}
               >
                 {u.status === "Active" ? "Disable" : "Enable"}
@@ -69,8 +75,12 @@ export function AdminUsersTable({ users }: { users: AdminUser[] }) {
                     danger: true,
                     onConfirm: async () => {
                       const result = await removeUserAction(u.id);
-                      if (result.success) toast.success(result.message);
-                      else toast.error(result.error.message);
+                      if (result.success) {
+                        toast.success(result.message);
+                        router.refresh();
+                      } else {
+                        toast.error(result.error.message);
+                      }
                     },
                   })
                 }

@@ -14,6 +14,7 @@ export type HeaderPill = { label: string; tone?: "default" | "warn" };
 export type ModalName =
   | "create-project"
   | "add-environment"
+  | "edit-environment"
   | "upload-knowledge-source"
   | "invite-user"
   | "connect-figma";

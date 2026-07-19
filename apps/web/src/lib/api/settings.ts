@@ -12,7 +12,16 @@ export async function fetchSettings(): Promise<ApiResponse<PlatformSettings>> {
     // displayName/defaultProjectId/defaultEnvironmentName/theme are per-user preferences, not
     // part of the platform-wide settings row — there's no per-user-preferences table yet, so
     // only displayName is filled in for real; the rest stay placeholder defaults.
-    return ok({ ...settings, displayName: user.name });
+    // aiConnectionStatus/aiApiKeyStatus reflect whether ANTHROPIC_API_KEY is actually configured
+    // (the same signal packages/core/src/ai/resolver.ts uses to decide whether to call the
+    // provider) — previously hardcoded to "Connected"/"Valid" regardless of real configuration.
+    const hasApiKey = Boolean(process.env.ANTHROPIC_API_KEY?.trim());
+    return ok({
+      ...settings,
+      displayName: user.name,
+      aiConnectionStatus: hasApiKey ? "Connected" : "Disconnected",
+      aiApiKeyStatus: hasApiKey ? "Valid" : "Missing",
+    });
   });
 }
 

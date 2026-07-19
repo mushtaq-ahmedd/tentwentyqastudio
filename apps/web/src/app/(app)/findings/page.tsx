@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { SetHeader } from "@/components/shell/set-header";
 import { FindingsExplorer } from "@/components/findings/findings-explorer";
 import { findingsApi } from "@/lib/api";
+
+export const metadata: Metadata = { title: "Findings" };
 
 export default async function FindingsPage({
   searchParams,

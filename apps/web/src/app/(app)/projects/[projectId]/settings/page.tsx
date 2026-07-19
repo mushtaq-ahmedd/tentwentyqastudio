@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProjectSettingsForm } from "@/components/projects/project-settings-form";
 import { projectsApi } from "@/lib/api";
+
+export const metadata: Metadata = { title: "Project Settings" };
 
 export default async function ProjectSettingsPage({
   params,

@@ -15,6 +15,12 @@ export type Project = {
   lastReportAt: string | null;
   totalFindings: number;
   criticalFindings: number;
+  // Validation config overrides (docs/03 Global -> Project -> Environment hierarchy). Null means
+  // "inherit from Global" — see packages/core/src/engine-config.ts for how these are resolved.
+  screenshotQuality: "High" | "Medium" | null;
+  defaultTimeoutSeconds: number | null;
+  retryCount: number | null;
+  defaultViewport: string | null;
 };
 
 export type EnvironmentAuthStatus = "verified" | "not-configured";

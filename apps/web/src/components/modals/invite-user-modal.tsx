@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -20,6 +21,7 @@ import { USER_ROLES, type UserRole } from "@/lib/types";
 
 export function InviteUserModal({ open }: { open: boolean }) {
   const { closeModal } = useUI();
+  const router = useRouter();
   const [pending, setPending] = React.useState(false);
   const [form, setForm] = React.useState<{ name: string; email: string; role: UserRole }>({
     name: "",
@@ -37,6 +39,7 @@ export function InviteUserModal({ open }: { open: boolean }) {
     }
     toast.success(result.message);
     closeModal();
+    router.refresh();
   }
 
   return (

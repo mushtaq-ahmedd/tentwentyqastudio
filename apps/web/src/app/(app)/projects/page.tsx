@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { Plus } from "lucide-react";
 import { SetHeader } from "@/components/shell/set-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { ProjectsTable } from "@/components/projects/projects-table";
 import { projectsApi } from "@/lib/api";
+
+export const metadata: Metadata = { title: "Projects" };
 
 export default async function ProjectsPage() {
   const res = await projectsApi.fetchProjects();

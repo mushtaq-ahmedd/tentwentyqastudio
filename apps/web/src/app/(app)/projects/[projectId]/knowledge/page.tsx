@@ -1,5 +1,8 @@
+import type { Metadata } from "next";
 import { KnowledgeExplorer } from "@/components/projects/knowledge-explorer";
 import { knowledgeApi } from "@/lib/api";
+
+export const metadata: Metadata = { title: "Knowledge" };
 
 export default async function ProjectKnowledgePage({
   params,

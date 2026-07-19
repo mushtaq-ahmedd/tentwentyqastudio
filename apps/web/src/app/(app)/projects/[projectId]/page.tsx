@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
@@ -6,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { auditsApi, dashboardApi, findingsApi, projectsApi } from "@/lib/api";
 import { formatDurationSeconds, formatRelativeTime } from "@/lib/format";
+
+export const metadata: Metadata = { title: "Project Overview" };
 
 export default async function ProjectOverviewPage({
   params,

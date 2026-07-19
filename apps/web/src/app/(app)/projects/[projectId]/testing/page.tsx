@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VALIDATION_TYPES } from "@/lib/types";
+
+export const metadata: Metadata = { title: "Testing Configuration" };
 
 const DEFAULT_ENABLED: Record<string, boolean> = {
   "UI Validation": true,

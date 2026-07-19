@@ -115,13 +115,14 @@ export function CreateProjectModal({ open }: { open: boolean }) {
           {step === 2 && (
             <>
               <p className="text-[13px] text-text-secondary">
-                Every project starts with these environments. Add UAT, Staging, or Production from the
-                project&apos;s Environments tab once it&apos;s created.
+                We recommend starting with these environments. They aren&apos;t created yet — add
+                each one (with its real URL) from the project&apos;s Environments tab once it&apos;s
+                created, alongside UAT, Staging, or Production.
               </p>
               {DEFAULT_ENVIRONMENTS.map((env) => (
                 <div key={env} className="flex items-center justify-between border-b border-border-default py-3 last:border-0">
                   <span className="font-medium">{env}</span>
-                  <Badge variant="accepted">Configured</Badge>
+                  <Badge variant="neutral">Not yet added</Badge>
                 </div>
               ))}
             </>
@@ -160,8 +161,8 @@ export function CreateProjectModal({ open }: { open: boolean }) {
               <div className="flex flex-col gap-2 rounded-card bg-bg-surface-secondary p-4 text-[13px]">
                 <div className="flex justify-between"><span className="text-text-secondary">Project Name</span><span>{form.name || "(untitled)"}</span></div>
                 <div className="flex justify-between"><span className="text-text-secondary">Client</span><span>{form.clientName || "—"}</span></div>
-                <div className="flex justify-between"><span className="text-text-secondary">Environments</span><span>{DEFAULT_ENVIRONMENTS.join(", ")}</span></div>
-                <div className="flex justify-between"><span className="text-text-secondary">Authentication</span><span>Configured</span></div>
+                <div className="flex justify-between"><span className="text-text-secondary">Suggested Environments</span><span>{DEFAULT_ENVIRONMENTS.join(", ")} (add after creation)</span></div>
+                <div className="flex justify-between"><span className="text-text-secondary">Authentication</span><span>Not yet configured</span></div>
               </div>
             </>
           )}

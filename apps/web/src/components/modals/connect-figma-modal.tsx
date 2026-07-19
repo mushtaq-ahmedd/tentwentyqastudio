@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -20,6 +21,7 @@ import { addKnowledgeSourceAction } from "@/app/actions/knowledge";
 /** Saving chains into the generic Confirm dialog as a success message — same handoff as modals.js. */
 export function ConnectFigmaModal({ open, projectId }: { open: boolean; projectId?: string }) {
   const { closeModal, openConfirm } = useUI();
+  const router = useRouter();
   const [figmaFileUrl, setFigmaFileUrl] = React.useState("");
   const [figmaAccessToken, setFigmaAccessToken] = React.useState("");
   const [pending, setPending] = React.useState(false);
@@ -46,6 +48,7 @@ export function ConnectFigmaModal({ open, projectId }: { open: boolean; projectI
     closeModal();
     setFigmaFileUrl("");
     setFigmaAccessToken("");
+    router.refresh();
     openConfirm({
       title: "Figma Connected",
       message: `"${result.data.figmaFileName}" is connected. It will now be used for Figma Comparison audits.`,

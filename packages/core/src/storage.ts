@@ -28,6 +28,24 @@ function storageClient(): SupabaseClient {
  * `Evidence.storagePath`. Path convention: `{auditId}/{pageId}/{kind}-{timestamp}.{ext}`, so all
  * evidence for one audit/page groups together in the bucket.
  */
+/** Content types actually used by Engines whose naive subtype (`contentType.split("/")[1]`)
+ * doesn't match the file extension a human would expect — e.g. "text/plain" -> "plain" instead
+ * of "txt". Anything not listed here falls back to the naive split. */
+const CONTENT_TYPE_EXTENSIONS: Record<string, string> = {
+  "text/plain": "txt",
+  "text/html": "html",
+  "text/csv": "csv",
+  "application/json": "json",
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "application/pdf": "pdf",
+};
+
+function extensionForContentType(contentType: string): string {
+  const bare = contentType.split(";")[0]?.trim() ?? contentType;
+  return CONTENT_TYPE_EXTENSIONS[bare] ?? bare.split("/")[1] ?? "bin";
+}
+
 export async function uploadEvidence(
   auditId: string,
   pageId: string,
@@ -35,7 +53,7 @@ export async function uploadEvidence(
   data: Buffer | string,
   contentType: string
 ): Promise<string> {
-  const ext = contentType.split("/")[1]?.split(";")[0] ?? "bin";
+  const ext = extensionForContentType(contentType);
   const path = `${auditId}/${pageId}/${kind}-${Date.now()}.${ext}`;
   const { error } = await storageClient()
     .storage.from(BUCKET)

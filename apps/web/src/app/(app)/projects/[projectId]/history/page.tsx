@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { Card, CardContent } from "@/components/ui/card";
 import { AuditHistoryTable } from "@/components/history/audit-history-table";
 import { auditsApi } from "@/lib/api";
+
+export const metadata: Metadata = { title: "Project History" };
 
 export default async function ProjectHistoryPage({
   params,

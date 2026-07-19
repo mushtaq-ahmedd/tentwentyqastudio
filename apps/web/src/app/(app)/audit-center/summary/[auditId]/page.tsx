@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SetHeader } from "@/components/shell/set-header";
@@ -6,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { auditsApi } from "@/lib/api";
 import { formatDurationSeconds } from "@/lib/format";
+
+export const metadata: Metadata = { title: "Audit Summary" };
 
 const SEVERITY_LABELS = ["critical", "high", "medium", "low"] as const;
 

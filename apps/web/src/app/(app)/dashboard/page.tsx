@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Play } from "lucide-react";
 import { SetHeader } from "@/components/shell/set-header";
@@ -10,6 +11,8 @@ import { QuickActionsCard } from "@/components/dashboard/quick-actions-card";
 import { dashboardApi } from "@/lib/api";
 import { formatRelativeTime } from "@/lib/format";
 import type { AuditStatus, ProjectStatus } from "@/lib/types";
+
+export const metadata: Metadata = { title: "Dashboard" };
 
 const PROJECT_STATUS_CHIP: Record<ProjectStatus, "completed" | "failed" | "running"> = {
   ready: "completed",
