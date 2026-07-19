@@ -229,6 +229,27 @@
 > attributed to `FUNCTIONAL` and exactly 2 findings ("Console Error", "Missing Image") attributed
 > to `BROWSER_VALIDATION` — confirming the two engines run and report completely independently,
 > not just that the code compiles.
+>
+> **Background job queue (BullMQ + Redis) is now real**, closing the single most-repeated interim
+> simplification flagged throughout this doc: audits used to run synchronously in-process inside
+> the same web request that started them, blocking that request until every engine finished, with
+> no way to survive a web-server restart mid-audit. `startAudit()` now creates the Audit row and
+> calls `enqueueAudit()` (`packages/core/src/queue.ts`), returning immediately; a separate,
+> long-running worker process (`apps/web/scripts/worker.ts`, run via `pnpm --filter web run
+> worker`, one per docs/11's "Background Workers" box) consumes the queue and calls `runAudit()` —
+> the orchestrator itself is unchanged, just no longer invoked inline from a request handler.
+> Redis is Upstash-hosted (`REDIS_URL` in `.env.local`) rather than a local Docker Compose instance
+> per docs/11's stated local-dev default — Docker wasn't available in this environment; the code
+> is host-agnostic (any standard Redis connection string works). Job-level retries are capped at 2
+> with a fixed backoff — not to retry an audit that failed on its own merits (the orchestrator's
+> own top-level try/catch already marks those `FAILED` and resolves the job normally, so BullMQ
+> never sees them as failed jobs), but as a safety net for the worker *process* itself crashing
+> before that try/catch runs; re-invoking `runAudit()` is safe since it only re-processes engines
+> still `WAITING`. **Live-verified**: ran a real audit through the actual UI with the worker
+> process running separately from the Next.js dev server — the job was picked up in under a
+> second, all 7 engines executed for real (not skipped), and the audit reached `COMPLETED`,
+> confirmed via both the database and the worker's own structured log output
+> (`audit-job-active`/`audit-job-completed` events).
 
 ## Architecture Philosophy
 

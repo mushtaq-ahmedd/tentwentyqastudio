@@ -6,6 +6,7 @@
     "dev": "dotenv -e ../../.env.local -- next dev",
     "build": "dotenv -e ../../.env.local -- next build",
     "start": "dotenv -e ../../.env.local -- next start",
+    "worker": "dotenv -e ../../.env.local -- tsx watch scripts/worker.ts",
     "lint": "eslint"
   },
   "dependencies": {
@@ -46,6 +47,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "tsx": "^4.19.2"
   }
 }

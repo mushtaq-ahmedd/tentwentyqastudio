@@ -1,9 +1,5 @@
 import { prisma } from "@tentwenty/db";
-import { runAudit as runAuditOrchestrator } from "@tentwenty/core";
-// instrumentation.ts's register() runs in a separate module graph than Server Actions in
-// Turbopack dev mode — the Engine Registry singleton it populates isn't visible here. Importing
-// directly guarantees this specific bundle has engines registered before runAudit() is called.
-import "@/lib/engines/register";
+import { enqueueAudit } from "@tentwenty/core";
 import type { ApiResponse, Audit, ValidationType } from "@/lib/types";
 import { requireNotViewer, requireUser } from "@/lib/auth/session";
 import { fail, guarded, ok } from "./client";
@@ -97,11 +93,13 @@ export async function fetchActiveAudit(): Promise<ApiResponse<Audit | null>> {
 }
 
 /**
- * Creates the audit, then runs the Orchestrator (docs/03) in-process before returning — see
- * packages/core/src/orchestrator.ts for why this is synchronous rather than a queued
- * background job for now. Only Discovery is actually implemented as of this pass; every other
- * selected validation type's engine stays WAITING, and the Orchestrator leaves the audit
- * honestly RUNNING (not a faked COMPLETED) until those engines exist.
+ * Creates the audit at status QUEUED, then enqueues a BullMQ job (docs/08/docs/11) instead of
+ * running the Orchestrator in-process — a separate worker process (apps/web/scripts/worker.ts)
+ * picks it up and calls runAudit(). This is what lets the web app return instantly instead of
+ * blocking the request until every engine finishes, and what lets an in-progress audit survive a
+ * web-server restart (the job persists in Redis until a worker claims it). Requires the worker
+ * process to actually be running (`pnpm --filter web run worker`) — otherwise the audit will sit
+ * at QUEUED, which is the honest state (docs/03: never fake a COMPLETED pipeline that didn't run).
  */
 export async function startAudit(input: {
   projectId: string;
@@ -159,10 +157,10 @@ export async function startAudit(input: {
       },
     });
 
-    await runAuditOrchestrator(created.id);
+    await enqueueAudit(created.id);
 
     const audit = await prisma.audit.findUniqueOrThrow({ where: { id: created.id }, include: AUDIT_INCLUDE });
-    return ok(toAudit(audit as AuditWithRelations), "Audit started.");
+    return ok(toAudit(audit as AuditWithRelations), "Audit queued.");
   });
 }
 
