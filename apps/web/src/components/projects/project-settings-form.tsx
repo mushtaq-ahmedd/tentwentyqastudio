@@ -16,7 +16,7 @@ import type { Project } from "@/lib/types";
 const VIEWPORT_OPTIONS = ["Desktop (1440x900)", "Laptop (1280x800)", "Tablet (768x1024)", "Mobile (375x667)"];
 
 export function ProjectSettingsForm({ project }: { project: Project }) {
-  const { openConfirm } = useUI();
+  const { openConfirm, openModal } = useUI();
   const router = useRouter();
   const [name, setName] = React.useState(project.name);
   const [description, setDescription] = React.useState(project.description);
@@ -84,6 +84,47 @@ export function ProjectSettingsForm({ project }: { project: Project }) {
             </Select>
             <p className="text-xs text-text-secondary">Not implemented yet — no retention enforcement exists.</p>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-[640px]">
+        <CardTitle>Figma Design</CardTitle>
+        <CardContent className="flex flex-col gap-3">
+          {project.figmaFileUrl ? (
+            <>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-text-secondary">Connected file</span>
+                <a
+                  href={project.figmaFileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="truncate text-[13px] font-medium text-accent-default hover:underline"
+                >
+                  {project.figmaFileUrl}
+                </a>
+              </div>
+              <div>
+                <Button
+                  variant="secondary"
+                  onClick={() => openModal("connect-figma", { projectId: project.id })}
+                >
+                  Reconnect / Change File
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[13px] text-text-secondary">
+                No Figma file connected yet. Connect one to enable Figma Comparison audits for
+                this project.
+              </p>
+              <div>
+                <Button onClick={() => openModal("connect-figma", { projectId: project.id })}>
+                  Connect Figma
+                </Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
