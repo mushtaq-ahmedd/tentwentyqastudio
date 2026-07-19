@@ -46,6 +46,7 @@ model User {
   projects      Project[]  @relation("ProjectOwner")
   auditsStarted Audit[]    @relation("AuditStartedBy")
   reports       Report[]   @relation("ReportGeneratedBy")
+  testFlowsCreated TestFlow[] @relation("TestFlowCreatedBy")
 
   @@map("users")
 }
@@ -95,6 +96,7 @@ model Project {
   reports           Report[]
   figmaFileCache    FigmaFileCache[]
   pageScreenshots   PageScreenshot[]
+  testFlows         TestFlow[]
 
   @@index([ownerId])
   @@map("projects")
@@ -219,6 +221,65 @@ model KnowledgeSource {
   @@map("knowledge_sources")
 }
 
+/// Recorded (authored, deterministically-replayed) multi-step user journeys — docs/02 V2's
+/// "Workflow Validation (multi-step: login, registration, checkout, booking, payment)",
+/// deliberately pulled forward from V2 into V1 at the user's explicit request (see docs/02's
+/// scope-acceleration note and docs/03's Workflow Engine implementation-status note). Each step
+/// is one deterministic Playwright action/assertion — there is no AI authoring or autonomous
+/// exploration involved (CLAUDE.md's V1 exclusions), only a human-authored script replayed
+/// exactly, same "deterministic validation before AI" rule as every other Engine.
+enum FlowStepAction {
+  NAVIGATE
+  CLICK
+  FILL
+  PRESS_KEY
+  ASSERT_VISIBLE
+  ASSERT_TEXT
+  ASSERT_URL
+}
+
+model TestFlow {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @map("project_id") @db.Uuid
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  description String   @default("")
+  /// Relative path (e.g. "/login") or absolute URL this flow starts from — resolved against the
+  /// audited Environment's own base URL at replay time if relative (packages/engines/workflow-engine).
+  startUrl    String   @map("start_url")
+  /// Lets a flow be authored/edited without it running on every audit in the meantime — same
+  /// on/off convention as Environment.online, not a soft-delete.
+  enabled     Boolean  @default(true)
+  createdById String   @map("created_by_id") @db.Uuid
+  createdBy   User     @relation("TestFlowCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  steps FlowStep[]
+
+  @@index([projectId])
+  @@map("test_flows")
+}
+
+model FlowStep {
+  id         String         @id @default(uuid()) @db.Uuid
+  testFlowId String         @map("test_flow_id") @db.Uuid
+  testFlow   TestFlow       @relation(fields: [testFlowId], references: [id], onDelete: Cascade)
+  /// Replay order within the flow — not the row's own creation order, since steps can be
+  /// reordered independently of when they were added.
+  order      Int
+  action     FlowStepAction
+  /// CSS selector or Playwright text locator (e.g. "text=Sign In") — required for CLICK, FILL,
+  /// PRESS_KEY, ASSERT_VISIBLE; optional for ASSERT_TEXT (scopes the search, else the whole page
+  /// is searched); unused for NAVIGATE/ASSERT_URL.
+  selector   String?
+  /// Action-dependent payload: FILL's text to type, PRESS_KEY's key name, ASSERT_TEXT's/
+  /// ASSERT_URL's expected substring, NAVIGATE's destination path.
+  value      String?
+
+  @@index([testFlowId])
+  @@map("flow_steps")
+}
+
 // ---------------------------------------------------------------------------
 // Audits, Pages, Engine Results
 // ---------------------------------------------------------------------------
@@ -253,6 +314,11 @@ enum EngineName {
   VISUAL
   CONTENT
   FUNCTIONAL
+  /// Recorded multi-step flow replay (docs/02 V2 "Workflow Validation", pulled forward — see
+  /// TestFlow/FlowStep above and packages/engines/workflow-engine) — deliberately distinct from
+  /// FUNCTIONAL (broken-link checking only) since it's a separate responsibility (CLAUDE.md
+  /// non-negotiable #4).
+  WORKFLOW
   BROWSER_VALIDATION
   ACCESSIBILITY
   PERFORMANCE

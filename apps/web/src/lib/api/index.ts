@@ -2,6 +2,7 @@ export * from "./client";
 export * as projectsApi from "./projects";
 export * as environmentsApi from "./environments";
 export * as knowledgeApi from "./knowledge";
+export * as testFlowsApi from "./test-flows";
 export * as auditsApi from "./audits";
 export * as findingsApi from "./findings";
 export * as reportsApi from "./reports";

@@ -17,7 +17,8 @@ export type ModalName =
   | "edit-environment"
   | "upload-knowledge-source"
   | "invite-user"
-  | "connect-figma";
+  | "connect-figma"
+  | "create-test-flow";
 
 export type HeaderAction = {
   label: string;

@@ -76,6 +76,21 @@ async function runAuditInner(auditId: string): Promise<void> {
   });
   const contentSheetRows = (contentSheetSource?.parsedContent as { rows?: unknown[] } | null)?.rows ?? null;
 
+  // Recorded flows (docs/02 V2 "Workflow Validation", pulled forward — see
+  // packages/engines/workflow-engine) — resolved once here, same pattern as contentSheetRows
+  // above, so the Workflow Engine never queries Prisma itself (docs/03).
+  const testFlowRows = await prisma.testFlow.findMany({
+    where: { projectId: audit.projectId, enabled: true },
+    include: { steps: { orderBy: { order: "asc" } } },
+    orderBy: { createdAt: "asc" },
+  });
+  const testFlows = testFlowRows.map((flow) => ({
+    id: flow.id,
+    name: flow.name,
+    startUrl: flow.startUrl,
+    steps: flow.steps.map((s) => ({ order: s.order, action: s.action, selector: s.selector, value: s.value })),
+  }));
+
   const executionOrder = engineRegistry.resolveExecutionOrder();
   const totalForThisAudit = audit.engineResults.length;
   const runnable = executionOrder.filter((engine) =>
@@ -103,6 +118,14 @@ async function runAuditInner(auditId: string): Promise<void> {
       // Parsed Content Sheet rows (docs/04 Content Engine Mode 1), or null if the project has no
       // successfully parsed Content Sheet — the Content Engine falls back to Mode 2-only checks.
       contentSheetRows,
+      // Recorded flows for the Workflow Engine to replay — see above.
+      testFlows,
+      // Resolved below, once Discovery's pages are persisted — null until then. The Workflow
+      // Engine (scope "audit", no context.page) still needs a real Page row to attach its
+      // findings/evidence to (persistFindings requires an exact URL match); anchoring to the
+      // first discovered page is the same "audit-level finding needs a page anchor" tradeoff
+      // the Visual Engine's docs/03 note describes, just for a different engine.
+      anchorPage: null as { id: string; url: string } | null,
     },
     sharedResources: {},
   };
@@ -136,6 +159,8 @@ async function runAuditInner(auditId: string): Promise<void> {
     if (!pagesPersisted && context.sharedResources.pages?.length) {
       await persistDiscoveredPages(audit.id, context.sharedResources.pages);
       pagesPersisted = true;
+      const anchorPage = await prisma.page.findFirst({ where: { auditId }, orderBy: { id: "asc" } });
+      if (anchorPage) context.configuration.anchorPage = { id: anchorPage.id, url: anchorPage.url };
     }
 
     const completedCount = await prisma.engineResult.count({

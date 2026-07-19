@@ -310,6 +310,42 @@
 > a "Grammar/Spelling Issues" finding (confidence 0.87) listing 8 real issues with correct
 > suggested corrections ("These", "is", "don't", "delivered", "the"), and the audit reached
 > `COMPLETED` normally.
+>
+> **A new Workflow Engine (`packages/engines/workflow-engine`) replays recorded, human-authored
+> multi-step flows** (login, registration, checkout, booking, payment) via a real Playwright
+> browser — docs/02 V2's "Workflow Validation," deliberately pulled forward into V1 at the user's
+> explicit request (see docs/02's matching scope-acceleration note). A genuinely separate Engine
+> from the Functional Engine (broken-link checking only — CLAUDE.md non-negotiable #4, one
+> responsibility per Engine) and from the Browser Engine, despite both driving Playwright: the
+> Browser Engine's `scope: "page"` closes its browser after every single page, which can't hold a
+> session open across a flow's multiple steps the way a real login-then-checkout journey needs,
+> so this Engine manages its own browser lifecycle entirely independently, per flow. New schema:
+> `TestFlow`/`FlowStep` (project-scoped, authored via a new "Test Flows" section on the Testing
+> Configuration page — a form-based step editor, not a live browser-interaction recorder; each
+> step is one deterministic Playwright action/assertion — NAVIGATE/CLICK/FILL/PRESS_KEY/
+> ASSERT_VISIBLE/ASSERT_TEXT/ASSERT_URL — authored by a QA engineer, never AI-generated or
+> autonomously discovered, so this doesn't cross either of CLAUDE.md's real V1 exclusions). `scope:
+> "audit"` (once per audit, not once per page) since a flow spans a whole journey, not one page;
+> depends on `discovery-engine` and reads the Orchestrator-resolved `anchorPage` (the first
+> discovered page) from `context.configuration` to attach its findings/evidence to, since
+> `persistFindings` requires an exact Page-URL match and this Engine's findings aren't naturally
+> about any single page. A flow that fully passes produces no finding (matching content/success
+> isn't evidence of a problem, same convention as every other engine); the first step that fails
+> stops the flow and is reported exactly as observed — its real error message and a screenshot at
+> the moment of failure — not paraphrased or guessed at. Rides along whenever Functional
+> Validation is selected (not its own checkbox), same "always included alongside" treatment as
+> Figma/Element Matching. **Live-verified** three ways: (1) `runner.verify.ts`, a manual fixture
+> script driving a real Playwright browser against a real local fixture login page (no mocking) —
+> confirming a correct-credentials flow passes end-to-end, a wrong-password flow is correctly
+> reported as failed at the exact assertion step with a real error message and a non-empty
+> screenshot, and a step targeting a nonexistent selector fails rather than silently passing; (2)
+> authoring a real flow through the actual Testing Configuration UI end-to-end (form → Server
+> Action → Prisma → Postgres) and confirming it was stored with the exact steps entered; (3) two
+> real audits through the full pipeline and BullMQ worker against a live fixture login page — a
+> flow with correct credentials produced zero findings (correctly passing), and a second flow with
+> a wrong password produced a real "Test Flow Failed" finding (confidence 0.95, severity HIGH)
+> correctly attributing the failure to step 4 ("Assert URL contains "/dashboard"") with the actual
+> observed URL, a real uploaded failure screenshot, and both audits reached `COMPLETED` normally.
 
 ## Architecture Philosophy
 

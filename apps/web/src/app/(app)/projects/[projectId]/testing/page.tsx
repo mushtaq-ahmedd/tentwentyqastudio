@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { VALIDATION_TYPES } from "@/lib/types";
+import { testFlowsApi } from "@/lib/api";
+import { TestFlowsPanel } from "@/components/projects/test-flows-panel";
 
 export const metadata: Metadata = { title: "Testing Configuration" };
 
@@ -16,7 +18,11 @@ const DEFAULT_ENABLED: Record<string, boolean> = {
   "Functional Validation": false,
 };
 
-export default function ProjectTestingPage() {
+export default async function ProjectTestingPage({ params }: { params: Promise<{ projectId: string }> }) {
+  const { projectId } = await params;
+  const flowsRes = await testFlowsApi.fetchTestFlows(projectId);
+  const flows = flowsRes.success ? flowsRes.data : [];
+
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-6">
@@ -78,6 +84,18 @@ export default function ProjectTestingPage() {
               </span>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardTitle>Test Flows</CardTitle>
+        <CardContent>
+          <p className="mb-3.5 text-[12.5px] text-text-secondary">
+            Recorded, multi-step user journeys (login, checkout, booking...) replayed by a real browser
+            on every audit that includes Functional Validation — each step is a deterministic action or
+            assertion, not an AI guess at whether the page &quot;looks right.&quot;
+          </p>
+          <TestFlowsPanel projectId={projectId} flows={flows} />
         </CardContent>
       </Card>
     </div>

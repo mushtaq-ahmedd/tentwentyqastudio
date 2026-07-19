@@ -123,6 +123,12 @@ export async function startAudit(input: {
       if (!engineNames.includes("FIGMA")) engineNames.push("FIGMA");
       if (!engineNames.includes("ELEMENT_MATCHING")) engineNames.push("ELEMENT_MATCHING");
     }
+    // Workflow (recorded multi-step flow replay, docs/02 V2 pulled forward) rides along whenever
+    // Functional Validation is selected — same "always included alongside" treatment as
+    // Figma/Element Matching above, since it isn't its own user-facing ValidationType either.
+    if (engineNames.includes("FUNCTIONAL") && !engineNames.includes("WORKFLOW")) {
+      engineNames.push("WORKFLOW");
+    }
 
     const created = await prisma.audit.create({
       data: {

@@ -65,6 +65,9 @@ importers:
       '@tentwenty/visual-engine':
         specifier: workspace:*
         version: link:../../packages/engines/visual-engine
+      '@tentwenty/workflow-engine':
+        specifier: workspace:*
+        version: link:../../packages/engines/workflow-engine
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -395,6 +398,28 @@ importers:
       '@types/pngjs':
         specifier: ^6.0.5
         version: 6.0.5
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.1
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/engines/workflow-engine:
+    dependencies:
+      '@tentwenty/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@tentwenty/db':
+        specifier: workspace:*
+        version: link:../../db
+      playwright:
+        specifier: ^1.48.0
+        version: 1.61.1
+    devDependencies:
+      '@types/node':
+        specifier: ^20
+        version: 20.19.43
       tsx:
         specifier: ^4.19.2
         version: 4.23.1

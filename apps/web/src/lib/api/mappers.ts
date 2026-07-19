@@ -15,6 +15,8 @@ import type {
   Report as DbReport,
   User as DbUser,
   PlatformSettings as DbPlatformSettings,
+  TestFlow as DbTestFlow,
+  FlowStep as DbFlowStep,
 } from "@tentwenty/db";
 import type {
   AdminUser,
@@ -24,6 +26,8 @@ import type {
   EnvironmentAuthStatus,
   Evidence,
   Finding,
+  FlowStep,
+  FlowStepAction,
   KnowledgeSource,
   KnowledgeSourceType,
   PlatformSettings,
@@ -33,6 +37,7 @@ import type {
   ReportFormat,
   ReportType,
   Severity,
+  TestFlow,
   UserRole,
   ValidationType,
 } from "@/lib/types";
@@ -98,6 +103,7 @@ const ENGINE_NAME: Record<DbEngineResult["engine"], EngineName> = {
   VISUAL: "Visual",
   CONTENT: "Content",
   FUNCTIONAL: "Functional",
+  WORKFLOW: "Workflow",
   BROWSER_VALIDATION: "Browser Validation",
   ACCESSIBILITY: "Accessibility",
   PERFORMANCE: "Performance",
@@ -237,6 +243,39 @@ export function toKnowledgeSource(k: DbKnowledgeSource): KnowledgeSource {
     uploadedAt: k.uploadedAt.toISOString(),
     status: KNOWLEDGE_STATUS[k.status],
     parseErrors: k.status === "FAILED" ? (parsed?.errors ?? null) : null,
+  };
+}
+
+const FLOW_STEP_ACTION: Record<DbFlowStep["action"], FlowStepAction> = {
+  NAVIGATE: "Navigate",
+  CLICK: "Click",
+  FILL: "Fill",
+  PRESS_KEY: "Press Key",
+  ASSERT_VISIBLE: "Assert Visible",
+  ASSERT_TEXT: "Assert Text",
+  ASSERT_URL: "Assert URL",
+};
+
+export function toFlowStep(s: DbFlowStep): FlowStep {
+  return {
+    id: s.id,
+    order: s.order,
+    action: FLOW_STEP_ACTION[s.action],
+    selector: s.selector,
+    value: s.value,
+  };
+}
+
+export function toTestFlow(f: DbTestFlow & { steps: DbFlowStep[] }): TestFlow {
+  return {
+    id: f.id,
+    projectId: f.projectId,
+    name: f.name,
+    description: f.description,
+    startUrl: f.startUrl,
+    enabled: f.enabled,
+    createdAt: f.createdAt.toISOString(),
+    steps: [...f.steps].sort((a, b) => a.order - b.order).map(toFlowStep),
   };
 }
 

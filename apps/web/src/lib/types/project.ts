@@ -68,3 +68,37 @@ export type KnowledgeSource = {
   // and re-upload their CSV (packages/core/src/content-sheet.ts).
   parseErrors: string[] | null;
 };
+
+/** Recorded/authored multi-step flow (docs/02 V2 "Workflow Validation", pulled forward — see
+ * packages/engines/workflow-engine). Each step is one deterministic Playwright action/assertion,
+ * authored by a QA engineer, not recorded by literally capturing browser interactions live. */
+export const FLOW_STEP_ACTIONS = [
+  "Navigate",
+  "Click",
+  "Fill",
+  "Press Key",
+  "Assert Visible",
+  "Assert Text",
+  "Assert URL",
+] as const;
+
+export type FlowStepAction = (typeof FLOW_STEP_ACTIONS)[number];
+
+export type FlowStep = {
+  id: string;
+  order: number;
+  action: FlowStepAction;
+  selector: string | null;
+  value: string | null;
+};
+
+export type TestFlow = {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string;
+  startUrl: string;
+  enabled: boolean;
+  createdAt: string;
+  steps: FlowStep[];
+};

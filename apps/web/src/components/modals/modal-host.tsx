@@ -8,6 +8,7 @@ import { EditEnvironmentModal } from "./edit-environment-modal";
 import { UploadKnowledgeSourceModal } from "./upload-knowledge-source-modal";
 import { InviteUserModal } from "./invite-user-modal";
 import { ConnectFigmaModal } from "./connect-figma-modal";
+import { CreateTestFlowModal } from "./create-test-flow-modal";
 
 /** Renders whichever modal is currently open, per `useUI().modal`. */
 export function ModalHost() {
@@ -40,6 +41,11 @@ export function ModalHost() {
         initialMethod={modal?.payload?.mode as "file" | "text" | undefined}
       />
       <InviteUserModal key={openKey("invite-user")} open={modal?.name === "invite-user"} />
+      <CreateTestFlowModal
+        key={openKey("create-test-flow")}
+        open={modal?.name === "create-test-flow"}
+        projectId={modal?.payload?.projectId as string | undefined}
+      />
       <ConnectFigmaModal
         key={openKey("connect-figma")}
         open={modal?.name === "connect-figma"}

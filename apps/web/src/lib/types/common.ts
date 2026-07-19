@@ -15,10 +15,12 @@ export const VALIDATION_TYPES = [
 export type ValidationType = (typeof VALIDATION_TYPES)[number];
 
 /**
- * All 16 engines per docs/03's Engine Categories table — matches the Prisma `EngineName` enum
+ * All 17 engines per docs/03's Engine Categories table — matches the Prisma `EngineName` enum
  * 1:1 so API responses map cleanly. Note "Grammar Validation" is deliberately absent here: per
  * docs/04, grammar checking is the Content Engine's second mode, not a separate engine — it's
  * only a ValidationType (above), attributed to the CONTENT engine when it produces findings.
+ * "Workflow" (docs/02 V2 "Workflow Validation", pulled forward) is a genuinely separate engine
+ * from "Functional" — see packages/engines/workflow-engine's header comment.
  */
 export const ENGINES = [
   "Discovery",
@@ -29,6 +31,7 @@ export const ENGINES = [
   "Visual",
   "Content",
   "Functional",
+  "Workflow",
   "Browser Validation",
   "Accessibility",
   "Performance",
@@ -54,6 +57,7 @@ export const V1_ENGINES: EngineName[] = [
   "Visual",
   "Content",
   "Functional",
+  "Workflow",
   "Browser Validation",
   "Confidence",
   "AI",

@@ -96,7 +96,13 @@ Expands deterministic capability — still no autonomous AI judgement:
 - **Responsive Validation** (desktop/tablet/mobile)
 - **API Validation** (REST + GraphQL — status codes, response schema, response time, contract
   validation)
-- **Workflow Validation** (multi-step: login, registration, checkout, booking, payment)
+- **Workflow Validation** (multi-step: login, registration, checkout, booking, payment) —
+  **pulled forward into V1 at the user's explicit request** (see `packages/engines/workflow-engine`
+  and docs/03's matching implementation-status note). Built as human-authored, deterministically-
+  replayed flows — no AI-generated or autonomously-discovered steps — so it doesn't cross either
+  of CLAUDE.md's actual V1 exclusions ("AI-generated test cases," "autonomous exploratory
+  testing"); only its original V2 placement in this list is superseded, not the two real
+  exclusions themselves.
 - **Knowledge Base** — projects gain understanding via requirements, test cases, documentation,
   improving reporting and future AI reasoning
 - **Release Readiness Score** — overall release confidence based on findings

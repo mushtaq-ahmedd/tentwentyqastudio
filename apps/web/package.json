@@ -23,6 +23,7 @@
     "@tentwenty/element-matching-engine": "workspace:*",
     "@tentwenty/figma-engine": "workspace:*",
     "@tentwenty/functional-engine": "workspace:*",
+    "@tentwenty/workflow-engine": "workspace:*",
     "@tentwenty/browser-validation-engine": "workspace:*",
     "@tentwenty/report-engine": "workspace:*",
     "@tentwenty/ui-validation-engine": "workspace:*",

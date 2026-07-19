@@ -7,6 +7,7 @@ import "@tentwenty/discovery-engine";
 import "@tentwenty/browser-engine";
 import "@tentwenty/content-engine";
 import "@tentwenty/functional-engine";
+import "@tentwenty/workflow-engine";
 import "@tentwenty/browser-validation-engine";
 import "@tentwenty/figma-engine";
 import "@tentwenty/element-matching-engine";

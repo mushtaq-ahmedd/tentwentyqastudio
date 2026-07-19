@@ -105,6 +105,28 @@ export type DomElement = {
   style: ComputedStyleSummary;
 };
 
+/** One deterministic step in a recorded/authored TestFlow (docs/02 V2 "Workflow Validation",
+ * pulled forward — see packages/engines/workflow-engine). Mirrors the `FlowStep` Prisma model
+ * field-for-field; kept as a plain type here (rather than importing the Prisma model type
+ * directly) since the Orchestrator resolves this once and hands it through `EngineContext
+ * .configuration`, same pattern as `ContentSheetRow`. */
+export type WorkflowFlowStep = {
+  order: number;
+  action: "NAVIGATE" | "CLICK" | "FILL" | "PRESS_KEY" | "ASSERT_VISIBLE" | "ASSERT_TEXT" | "ASSERT_URL";
+  selector: string | null;
+  value: string | null;
+};
+
+/** One recorded/authored flow, with its steps already ordered — resolved once by the
+ * Orchestrator (`context.configuration.testFlows`), never queried directly by the Workflow
+ * Engine itself (docs/03: engines read only from the shared input the Core Platform provides). */
+export type WorkflowTestFlow = {
+  id: string;
+  name: string;
+  startUrl: string;
+  steps: WorkflowFlowStep[];
+};
+
 /**
  * Data that Collection engines (Discovery/Browser/Figma) hand forward to later engines —
  * docs/03 "Engines must not request data directly from other Engines — only from the shared
