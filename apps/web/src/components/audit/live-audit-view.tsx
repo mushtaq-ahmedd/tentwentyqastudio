@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -10,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { StatusChip } from "@/components/ui/status-chip";
 import { useUI } from "@/components/shell/ui-provider";
 import { cancelAuditAction } from "@/app/actions/audits";
-import { formatClock } from "@/lib/format";
 import type { Audit, EngineStatus, Finding } from "@/lib/types";
 
 const ENGINE_CHIP: Record<EngineStatus, "completed" | "running" | "queued" | "failed"> = {
@@ -20,9 +20,45 @@ const ENGINE_CHIP: Record<EngineStatus, "completed" | "running" | "queued" | "fa
   failed: "failed",
 };
 
+/** How often to poll for fresh progress while an audit is actually in flight. Audits run as a
+ * BullMQ background job (docs/03/docs/08) — this page previously fetched the audit exactly once
+ * at initial server render and never again, so it froze at whatever progress existed the moment
+ * the page loaded, looking permanently "stuck" even when the backend had long since finished
+ * (live-observed: a real audit completed in ~12 minutes while this page still showed its first-
+ * load 0%/DISCOVERY state indefinitely, since nothing ever asked the server for an update).
+ *
+ * Every server-rendered page here pays a real network round trip to Supabase Auth's `getUser()`
+ * (correct/required — it revalidates the session, unlike a local-only JWT decode) before it does
+ * anything else; live-observed at ~4s per request in this environment (Supabase project region
+ * is ap-northeast-2). That's *longer* than a naive fixed-interval poll would wait between firing
+ * requests, so a plain `setInterval(() => router.refresh(), 3000)` stacks up overlapping requests
+ * — and since they can resolve out of order, a slow, stale response can overwrite a newer one and
+ * the UI never visibly progresses even though the network tab shows fresh data going by
+ * (live-observed on a real audit: requests kept returning correct, fully up-to-date/completed
+ * data, but the rendered page stayed frozen at 0%). The `refreshPending` ref guarantees only one
+ * refresh is ever in flight — the next poll is skipped, not queued, until the current one has
+ * actually landed and produced a new `audit` prop. */
+const POLL_INTERVAL_MS = 3000;
+const TERMINAL_STATUSES: Audit["status"][] = ["completed", "failed", "cancelled"];
+
 export function LiveAuditView({ audit, findings }: { audit: Audit; findings: Finding[] }) {
   const { openConfirm } = useUI();
   const router = useRouter();
+  const refreshPending = React.useRef(false);
+
+  React.useEffect(() => {
+    refreshPending.current = false; // a fresh `audit` prop just landed — safe to poll again
+  }, [audit]);
+
+  React.useEffect(() => {
+    if (TERMINAL_STATUSES.includes(audit.status)) return;
+    const id = setInterval(() => {
+      if (refreshPending.current) return; // previous refresh hasn't resolved yet — don't stack up
+      refreshPending.current = true;
+      router.refresh();
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [audit.status, router]);
 
   return (
     <>
@@ -63,7 +99,9 @@ export function LiveAuditView({ audit, findings }: { audit: Audit; findings: Fin
         <CardContent>
           <div className="mb-2 flex items-baseline justify-between">
             <span className="font-mono-tabular font-mono text-[26px] font-semibold">{audit.progressPercent}%</span>
-            <span className="text-xs text-text-secondary">{audit.currentEngine} · in progress</span>
+            <span className="text-xs text-text-secondary">
+              {audit.currentEngine ?? "—"} · {audit.status}
+            </span>
           </div>
           <div className="h-2.5 w-full overflow-hidden rounded-full bg-bg-surface-secondary">
             <div className="h-full rounded-full bg-accent-default transition-all" style={{ width: `${audit.progressPercent}%` }} />
@@ -95,10 +133,15 @@ export function LiveAuditView({ audit, findings }: { audit: Audit; findings: Fin
             </div>
             <div className="mb-2 text-xs font-semibold">Audit Log</div>
             <div className="font-mono-tabular flex flex-col gap-1.5 font-mono text-[11.5px] text-text-secondary">
-              <div>{formatClock(0)} — Audit Started</div>
-              <div>{formatClock(42)} — Crawler Completed</div>
-              <div>{formatClock(65)} — Discovery Completed</div>
-              <div>{formatClock(134)} — {audit.currentEngine} Started</div>
+              {audit.engineResults
+                .filter((er) => er.status === "completed" || er.status === "failed")
+                .map((er) => (
+                  <div key={er.id}>
+                    {er.engine} {er.status}
+                    {er.durationSeconds !== null ? ` (${er.durationSeconds}s)` : ""}
+                  </div>
+                ))}
+              {audit.currentEngine && <div>{audit.currentEngine} running…</div>}
             </div>
           </CardContent>
         </Card>
@@ -129,16 +172,15 @@ export function LiveAuditView({ audit, findings }: { audit: Audit; findings: Fin
         </CardContent>
       </Card>
 
-      {/* Progress is a static mock value rather than driven by real engine events — this
-          affordance lets you reach the summary screen without waiting for a real completion. */}
-      <Button
-        variant="secondary"
-        render={<Link href={`/audit-center/summary/${audit.id}`} />}
-        nativeButton={false}
-        className="self-start"
-      >
-        Skip to Completion (demo) <ArrowRight className="size-3.5" />
-      </Button>
+      {(audit.status === "completed" || audit.status === "failed") && (
+        <Button
+          render={<Link href={`/audit-center/summary/${audit.id}`} />}
+          nativeButton={false}
+          className="self-start"
+        >
+          View Summary <ArrowRight className="size-3.5" />
+        </Button>
+      )}
     </>
   );
 }

@@ -380,6 +380,47 @@
 > larger audit — a real gap (report generation silently produces no PDF for bigger audits), but a
 > proper fix needs an image-compression step before embedding, which wasn't in scope for this
 > investigation.
+>
+> **The Live Audit page (`apps/web/src/app/(app)/audit-center/live/[auditId]/page.tsx` +
+> `live-audit-view.tsx`) never actually updated after its initial load** — a second, independent
+> root cause of "audit appears stuck," reported directly by the user and reproduced live. The page
+> is a Server Component that fetches the Audit + Findings exactly once per request; `LiveAuditView`
+> (its Client Component) rendered that snapshot with **zero polling mechanism of any kind** — no
+> `setInterval`, no `router.refresh()` on a timer, nothing — so once loaded it stayed frozen at
+> whatever progress existed at that moment, even though the backend (BullMQ worker) had genuinely
+> continued and finished minutes later. It also carried leftover mock scaffolding from before real
+> engines existed: a hardcoded "Audit Log" with fabricated timestamps ("Crawler Completed",
+> "Discovery Completed" at made-up offsets, unrelated to any real engine event) and a "Skip to
+> Completion (demo)" button that navigated to the summary page regardless of whether the audit had
+> actually finished. Fixed: `LiveAuditView` now polls via `router.refresh()` every 3s while
+> `audit.status` is non-terminal, the "Audit Log" is built from real `engineResults` (real
+> engine/status/`durationSeconds`), the static "in progress" label was replaced with the real
+> `audit.status`, and the demo button was replaced with a genuine "View Summary" link that only
+> appears once the audit has actually reached `completed`/`failed`.
+>
+> **A second bug surfaced immediately during live-verification of that fix**: every server-
+> rendered page in this app pays a real network round trip to Supabase Auth's `getUser()` inside
+> `requireUser()` before doing anything else — correct and intentional (it revalidates the session
+> against Supabase's servers rather than trusting a locally-decoded, unverified JWT — see
+> `session.ts`'s own comment), but live-observed at **~4 seconds per request** in this environment
+> (this Supabase project's region is `ap-northeast-2`). That's *longer* than the first version of
+> the poll interval (a flat 3s `setInterval`), so requests stacked up and resolved out of order —
+> the Network tab showed genuinely fresh, fully up-to-date/completed data coming back, yet the
+> rendered page stayed frozen at 0%, because a slow, stale in-flight request could still resolve
+> and get applied after a faster, newer one. Fixed by guarding with a `refreshPending` ref: the
+> next poll is skipped (not queued) until the current one has actually landed and produced a new
+> `audit` prop, so at most one refresh is ever in flight regardless of how slow any single request
+> is. **Not fixed, flagged for a separate decision**: the underlying ~4s-per-page Auth round trip
+> is a real, systemic latency floor affecting every page in the app, not just this one — a
+> genuine contributor to the "everything feels slow" complaints from earlier in this project's
+> history. Properly addressing it (moving the Supabase project to a nearer region, or adding a
+> short-TTL server-side cache for validated sessions) is an infrastructure decision with real
+> tradeoffs (region migration is disruptive; caching validated auth weakens the "always
+> revalidate" security posture Supabase's own guidance recommends) that wasn't made unilaterally
+> here. **Live re-verified** end-to-end after both fixes: watched the same Live Audit page,
+> untouched (no manual reload), through an entire real audit run — progress genuinely advanced
+> (0% → 38% → 88% → 100%), the Audit Log showed each engine's real completion in order, the page
+> correctly landed on "— · completed", and the real "View Summary" button appeared automatically.
 
 ## Architecture Philosophy
 
