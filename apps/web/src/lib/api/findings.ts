@@ -14,8 +14,14 @@ import { toFinding, type FindingWithEvidence } from "./mappers";
  * with, and any object that's since been deleted from the bucket.
  */
 async function resolveEvidenceContent(findings: Finding[]): Promise<Finding[]> {
-  for (const finding of findings) {
-    for (const evidence of finding.evidence) {
+  // Every evidence item is its own Supabase Storage round trip (sign a URL, or download text) —
+  // resolving them one at a time made a findings page with a few hundred evidence rows take
+  // 30-60+ seconds (live-observed). None of these calls depend on each other, so they all run
+  // concurrently instead; a single slow/failed one still falls back to the raw value below rather
+  // than blocking or breaking the rest.
+  const allEvidence = findings.flatMap((f) => f.evidence);
+  await Promise.all(
+    allEvidence.map(async (evidence) => {
       try {
         evidence.content =
           evidence.type === "screenshot"
@@ -24,8 +30,8 @@ async function resolveEvidenceContent(findings: Finding[]): Promise<Finding[]> {
       } catch {
         // Not a real storage path (mock/seed data) or the object is gone — show the raw value.
       }
-    }
-  }
+    })
+  );
   return findings;
 }
 
@@ -111,5 +117,16 @@ export async function deleteFindings(findingIds: string[]): Promise<ApiResponse<
     await requireNotViewer();
     await prisma.finding.deleteMany({ where: { id: { in: findingIds } } });
     return ok(null, `${findingIds.length} findings deleted.`);
+  });
+}
+
+/** Clears every finding matching the current filter — not just the selected rows on the current
+ * page. `projectId` undefined means "no project filter," i.e. every finding in the system, same
+ * "undefined = no constraint on this field" convention as `fetchFindings` above. */
+export async function deleteAllFindings(filter: { projectId?: string } = {}): Promise<ApiResponse<{ count: number }>> {
+  return guarded(async () => {
+    await requireNotViewer();
+    const { count } = await prisma.finding.deleteMany({ where: { projectId: filter.projectId } });
+    return ok({ count }, `${count} finding(s) cleared.`);
   });
 }

@@ -6,17 +6,21 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/shared/empty-state";
 import { useUI } from "@/components/shell/ui-provider";
 import {
   bulkSetFindingStatusAction,
+  clearAllFindingsAction,
   deleteFindingsAction,
   setFindingStatusAction,
 } from "@/app/actions/findings";
 import { confidenceLabel } from "@/lib/types";
-import type { Evidence, Finding, FindingStatus } from "@/lib/types";
+import type { Evidence, Finding, FindingStatus, Project } from "@/lib/types";
+
+const ALL_PROJECTS_VALUE = "__all__";
 
 const EVIDENCE_TABS: { key: Evidence["type"]; label: string }[] = [
   { key: "screenshot", label: "Screenshot" },
@@ -28,23 +32,61 @@ const EVIDENCE_TABS: { key: Evidence["type"]; label: string }[] = [
 
 export function FindingsExplorer({
   findings,
+  projects,
+  selectedProjectId,
   initialFindingId,
 }: {
   findings: Finding[];
+  projects: Project[];
+  selectedProjectId: string | null;
   initialFindingId: string | null;
 }) {
   const router = useRouter();
   const { openConfirm } = useUI();
-  const [selectedId, setSelectedId] = React.useState(initialFindingId ?? findings[0]?.id ?? null);
+  const [selectedId, setSelectedId] = React.useState<string | null>(initialFindingId ?? findings[0]?.id ?? null);
   const [evidenceTab, setEvidenceTab] = React.useState<Evidence["type"]>("screenshot");
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
 
   const finding = findings.find((f) => f.id === selectedId) ?? findings[0] ?? null;
+  const selectedProjectName = projects.find((p) => p.id === selectedProjectId)?.name;
 
   function selectFinding(id: string) {
     setSelectedId(id);
     setEvidenceTab("screenshot");
-    router.replace(`/findings?findingId=${id}`, { scroll: false });
+    const params = new URLSearchParams();
+    params.set("findingId", id);
+    if (selectedProjectId) params.set("projectId", selectedProjectId);
+    router.replace(`/findings?${params.toString()}`, { scroll: false });
+  }
+
+  function selectProject(projectId: string | null) {
+    setSelectedId(null);
+    if (!projectId || projectId === ALL_PROJECTS_VALUE) {
+      router.push("/findings");
+    } else {
+      router.push(`/findings?projectId=${projectId}`);
+    }
+  }
+
+  function handleClearAll() {
+    openConfirm({
+      title: "Clear All Findings",
+      message: selectedProjectName
+        ? `Delete all ${findings.length} finding(s) for "${selectedProjectName}"? This cannot be undone.`
+        : `Delete all ${findings.length} finding(s) across every project? This cannot be undone.`,
+      confirmLabel: "Clear All",
+      danger: true,
+      onConfirm: async () => {
+        const result = await clearAllFindingsAction(selectedProjectId ?? undefined);
+        if (result.success) {
+          toast.success(result.message);
+          setSelected(new Set());
+          router.refresh();
+        } else {
+          toast.error(result.error.message);
+        }
+      },
+    });
   }
 
   function toggleSelect(id: string) {
@@ -98,19 +140,47 @@ export function FindingsExplorer({
     });
   }
 
+  const evidence = finding?.evidence.find((e) => e.type === evidenceTab);
+
+  const toolbar = (
+    <div className="mb-4 flex items-center justify-between gap-3">
+      <Select value={selectedProjectId ?? ALL_PROJECTS_VALUE} onValueChange={selectProject}>
+        <SelectTrigger className="w-[260px]">
+          <SelectValue>{selectedProjectName ?? "All Projects"}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL_PROJECTS_VALUE}>All Projects</SelectItem>
+          {projects.map((p) => (
+            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button variant="danger" onClick={handleClearAll} disabled={findings.length === 0}>
+        Clear All
+      </Button>
+    </div>
+  );
+
   if (findings.length === 0) {
     return (
-      <EmptyState
-        title="No findings yet"
-        description="Findings appear here once an audit runs and validation engines detect issues."
-      />
+      <div className="flex min-h-0 flex-1 flex-col">
+        {toolbar}
+        <EmptyState
+          title="No findings yet"
+          description={
+            selectedProjectName
+              ? `No findings for "${selectedProjectName}" yet — they appear here once an audit runs and validation engines detect issues.`
+              : "Findings appear here once an audit runs and validation engines detect issues."
+          }
+        />
+      </div>
     );
   }
 
-  const evidence = finding?.evidence.find((e) => e.type === evidenceTab);
-
   return (
-    <div className="grid h-full min-h-0 flex-1 grid-cols-[380px_1fr] gap-5">
+    <div className="flex min-h-0 flex-1 flex-col">
+      {toolbar}
+      <div className="grid h-full min-h-0 flex-1 grid-cols-[380px_1fr] gap-5">
       <div className="flex min-w-0 flex-col gap-2.5">
         {selected.size > 0 && (
           <div className="flex items-center justify-between rounded-card bg-slate-900 px-3.5 py-2.5 text-[13px] text-white">
@@ -228,6 +298,7 @@ export function FindingsExplorer({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
