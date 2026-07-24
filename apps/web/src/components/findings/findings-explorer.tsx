@@ -23,6 +23,7 @@ import type { Evidence, Finding, FindingStatus, Project } from "@/lib/types";
 const ALL_PROJECTS_VALUE = "__all__";
 
 const EVIDENCE_TABS: { key: Evidence["type"]; label: string }[] = [
+  { key: "highlighted_screenshot", label: "Highlighted" },
   { key: "screenshot", label: "Screenshot" },
   { key: "dom", label: "DOM" },
   { key: "html", label: "HTML" },
@@ -44,15 +45,22 @@ export function FindingsExplorer({
   const router = useRouter();
   const { openConfirm } = useUI();
   const [selectedId, setSelectedId] = React.useState<string | null>(initialFindingId ?? findings[0]?.id ?? null);
-  const [evidenceTab, setEvidenceTab] = React.useState<Evidence["type"]>("screenshot");
+  // `null` = "no explicit choice yet — show the best available evidence for this finding" (the
+  // highlighted screenshot when one exists, since that's the whole point of a Location-bearing
+  // finding; a plain screenshot otherwise).
+  const [evidenceTab, setEvidenceTab] = React.useState<Evidence["type"] | null>(null);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
 
   const finding = findings.find((f) => f.id === selectedId) ?? findings[0] ?? null;
   const selectedProjectName = projects.find((p) => p.id === selectedProjectId)?.name;
+  const defaultEvidenceTab: Evidence["type"] = finding?.evidence.some((e) => e.type === "highlighted_screenshot")
+    ? "highlighted_screenshot"
+    : "screenshot";
+  const activeEvidenceTab = evidenceTab ?? defaultEvidenceTab;
 
   function selectFinding(id: string) {
     setSelectedId(id);
-    setEvidenceTab("screenshot");
+    setEvidenceTab(null);
     const params = new URLSearchParams();
     params.set("findingId", id);
     if (selectedProjectId) params.set("projectId", selectedProjectId);
@@ -140,7 +148,7 @@ export function FindingsExplorer({
     });
   }
 
-  const evidence = finding?.evidence.find((e) => e.type === evidenceTab);
+  const evidence = finding?.evidence.find((e) => e.type === activeEvidenceTab);
 
   const toolbar = (
     <div className="mb-4 flex items-center justify-between gap-3">
@@ -245,6 +253,20 @@ export function FindingsExplorer({
             </div>
           </div>
 
+          {finding.location && (finding.location.selector || finding.location.textSnippet) && (
+            <div className="mb-4.5">
+              <div className="mb-1.5 text-[11px] font-semibold tracking-[0.04em] text-text-secondary uppercase">Location</div>
+              <div className="flex flex-col gap-1 text-[12.5px] text-text-secondary">
+                {finding.location.selector && (
+                  <span>Selector: <code className="rounded bg-bg-surface-secondary px-1.5 py-0.5 font-mono text-[11.5px] text-text-primary">{finding.location.selector}</code></span>
+                )}
+                {finding.location.textSnippet && (
+                  <span>Text: <span className="text-text-primary">&quot;{finding.location.textSnippet}&quot;</span></span>
+                )}
+              </div>
+            </div>
+          )}
+
           <Section label="Expected Result">{finding.expectedResult}</Section>
           <Section label="Actual Result">{finding.actualResult}</Section>
           <Section label="Business Impact">{finding.businessImpact}</Section>
@@ -260,7 +282,7 @@ export function FindingsExplorer({
 
           <div className="mb-4.5">
             <div className="mb-1.5 text-[11px] font-semibold tracking-[0.04em] text-text-secondary uppercase">Evidence</div>
-            <Tabs value={evidenceTab} onValueChange={(v) => setEvidenceTab(v as Evidence["type"])}>
+            <Tabs value={activeEvidenceTab} onValueChange={(v) => setEvidenceTab(v as Evidence["type"])}>
               <TabsList className="mb-2.5">
                 {EVIDENCE_TABS.map((t) => (
                   <TabsTrigger key={t.key} value={t.key} disabled={!finding.evidence.some((e) => e.type === t.key)}>
@@ -270,12 +292,16 @@ export function FindingsExplorer({
               </TabsList>
             </Tabs>
             {evidence ? (
-              evidence.type === "screenshot" ? (
+              evidence.type === "screenshot" || evidence.type === "highlighted_screenshot" ? (
                 evidence.content.startsWith("http") ? (
                   // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL, not a static asset Next can optimize.
                   <img
                     src={evidence.content}
-                    alt={`${finding.title} — screenshot evidence`}
+                    alt={
+                      evidence.type === "highlighted_screenshot"
+                        ? `${finding.title} — highlighted screenshot showing exactly where this issue is`
+                        : `${finding.title} — screenshot evidence`
+                    }
                     className="max-h-96 w-full rounded-card border border-border-default object-contain"
                   />
                 ) : (

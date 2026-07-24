@@ -455,6 +455,15 @@ model Finding {
   /// fields, never the other way around: "the original finding is never altered by AI output."
   /// Null if the AI Engine wasn't configured, or its provider call failed for this finding.
   aiExplanation      String?       @map("ai_explanation")
+  /// Precise on-page pointer captured by the detecting Engine at the moment it found the issue —
+  /// `{ selector: string|null, textSnippet: string|null, boundingBox: {x,y,width,height}|null }`
+  /// (see `FindingLocation` in packages/core/src/types.ts). Mandatory going forward per the new
+  /// non-negotiable, but nullable here rather than a hard DB constraint: only the Links & Images
+  /// engine populates it today (its first real adopter, redesigned end-to-end for this) — every
+  /// other engine is migrated to it capability-by-capability, not all at once, per the explicit
+  /// "one capability at a time" build discipline. Never reconstructed downstream (AI narrates it,
+  /// never invents one) — see docs/06's location rule.
+  location           Json?
   status             FindingStatus @default(NEW)
   createdAt          DateTime      @default(now()) @map("created_at")
 

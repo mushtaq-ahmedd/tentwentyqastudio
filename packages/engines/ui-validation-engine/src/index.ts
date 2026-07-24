@@ -14,8 +14,9 @@ const TEXT_DIFF_THRESHOLD = 0.98;
 const MISSING_ELEMENT_CONFIDENCE = 0.78;
 const TEXT_DIFF_CONFIDENCE = 0.9;
 
-function findingBase(context: EngineContext): Pick<EngineFinding, "pageUrl" | "engine"> {
-  return { pageUrl: context.page!.url, engine: "UI_VALIDATION" };
+function findingBase(context: EngineContext): Pick<EngineFinding, "pageUrl" | "engine" | "location"> {
+  // Location not yet adopted by this Engine (docs/03: migrated one capability at a time).
+  return { pageUrl: context.page!.url, engine: "UI_VALIDATION", location: null };
 }
 
 export const uiValidationEngine: Engine = {

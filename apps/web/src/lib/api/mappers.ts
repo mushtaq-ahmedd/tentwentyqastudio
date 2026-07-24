@@ -26,6 +26,7 @@ import type {
   EnvironmentAuthStatus,
   Evidence,
   Finding,
+  FindingLocation,
   FlowStep,
   FlowStepAction,
   KnowledgeSource,
@@ -138,7 +139,7 @@ const FINDING_STATUS: Record<DbFinding["status"], Finding["status"]> = {
 
 const EVIDENCE_TYPE: Record<DbEvidence["type"], Evidence["type"]> = {
   SCREENSHOT: "screenshot",
-  HIGHLIGHTED_SCREENSHOT: "screenshot",
+  HIGHLIGHTED_SCREENSHOT: "highlighted_screenshot",
   DOM_SNAPSHOT: "dom",
   HTML_SNAPSHOT: "html",
   CSS_SNAPSHOT: "css",
@@ -340,6 +341,7 @@ export function toFinding(f: FindingWithEvidence): Finding {
     suggestedResolution: f.suggestedResolution,
     aiExplanation: f.aiExplanation,
     status: FINDING_STATUS[f.status],
+    location: (f.location as FindingLocation | null) ?? null,
     createdAt: f.createdAt.toISOString(),
     evidence: f.evidence.map((e) => ({
       id: e.id,

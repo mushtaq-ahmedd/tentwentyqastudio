@@ -10,6 +10,28 @@ export type DiscoveredPage = {
   name: string;
 };
 
+/** A pixel-space bounding box from a real layout pass (`getBoundingClientRect()`) — shared by
+ * every "where on the page is this" concept (Location, PageLink/PageImage, DomElement). */
+export type BoundingBox = { x: number; y: number; width: number; height: number };
+
+/**
+ * A precise, mandatory pointer to *where on the page* an issue is — CLAUDE.md's Location
+ * non-negotiable. Captured by the detecting Engine at the moment it finds the issue (it already
+ * has this data from the same DOM pass); never reconstructed or guessed later by anything
+ * downstream, including the AI Engine (docs/06's location rule). At least one of `selector`/
+ * `textSnippet`/`boundingBox` should be non-null — which one(s) make sense depends on the finding
+ * type (a broken link has a selector + bounding box; a grammar mistake has a text snippet).
+ */
+export type FindingLocation = {
+  /** CSS selector (or a best-effort element path) pointing at the specific element. */
+  selector: string | null;
+  /** The exact text snippet the finding is about, for content/grammar-type findings. */
+  textSnippet: string | null;
+  /** Where to draw the highlight box on the page screenshot — null only when the element has no
+   * visual position (e.g. `display: none`), in which case no highlighted screenshot is possible. */
+  boundingBox: BoundingBox | null;
+};
+
 /**
  * What the Browser Engine collects for one page — docs/03's diagram lists Console Monitoring,
  * Network Monitoring, and Screenshot Capture as per-page collection activities. `*Path` fields
@@ -30,20 +52,31 @@ export type BrowserPageArtifacts = {
   networkErrors: string[];
   /** Real rendered elements (via `getBoundingClientRect()`), for the Element Matching Engine. */
   domElements: DomElement[];
+  /** Every `<a href>` on the rendered page, resolved to an absolute URL — the Links & Images
+   * capability's real input (replaces Discovery's old static-HTML link parsing; see the Links &
+   * Images redesign note in docs/03). */
+  links: PageLink[];
+  /** Every `<img src>` on the rendered page, resolved to an absolute URL. */
+  images: PageImage[];
 };
 
-/**
- * One same-origin link the Discovery Engine tried to follow and couldn't — a real HTTP
- * error/timeout observed while crawling, not a guess. Discovery only *collects* this (docs/03:
- * Collection engines "gather data only, never judge"); the Functional Engine turns it into a
- * Finding. `evidencePath` is already uploaded (docs/05) — a text description of the check, since
- * Discovery runs before any Page row (and thus any real pageId) exists.
- */
-export type BrokenLink = {
-  pageUrl: string;
-  brokenHref: string;
-  reason: string;
-  evidencePath: string;
+/** One `<a href>` found on a real rendered page — resolved URL, a best-effort CSS selector, its
+ * visible text (for a human-readable finding), and its on-page bounding box (null if the element
+ * has no visual position, e.g. `display: none`). */
+export type PageLink = {
+  url: string;
+  selector: string;
+  text: string;
+  boundingBox: BoundingBox | null;
+};
+
+/** One `<img src>` found on a real rendered page — same shape as `PageLink`, with `alt` text
+ * instead of link text. */
+export type PageImage = {
+  url: string;
+  selector: string;
+  alt: string;
+  boundingBox: BoundingBox | null;
 };
 
 /**
@@ -136,8 +169,6 @@ export type SharedResources = {
   pages?: DiscoveredPage[];
   /** Keyed by page URL — populated by the Browser Engine, read by page-scoped Validation engines. */
   pageArtifacts?: Record<string, BrowserPageArtifacts>;
-  /** Populated by the Discovery Engine while crawling — read by the Functional Engine. */
-  brokenLinks?: BrokenLink[];
   /** Populated by the Figma Engine — read by the Element Matching Engine. */
   figmaFrames?: FigmaFrame[];
   figmaElements?: FigmaElement[];
@@ -209,6 +240,10 @@ export type EngineFinding = {
   actualResult: string;
   businessImpact: string;
   suggestedResolution: string;
+  /** Precise on-page pointer — mandatory for any engine that's adopted the Location rule (see
+   * `FindingLocation` above); `null` for engines not yet migrated to it (docs/03: migrated
+   * capability-by-capability, not retrofitted onto every engine at once). */
+  location: FindingLocation | null;
   evidence: EngineEvidence[];
 };
 

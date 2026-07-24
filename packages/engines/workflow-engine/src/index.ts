@@ -89,6 +89,8 @@ export const workflowEngine: Engine = {
       findings.push({
         pageUrl: anchorPage.url,
         engine: "WORKFLOW",
+        // Location not yet adopted by this Engine (docs/03: migrated one capability at a time).
+        location: null,
         severity: "HIGH",
         confidence: 0.95,
         category: "Test Flow Failed",

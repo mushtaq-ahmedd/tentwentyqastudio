@@ -421,6 +421,76 @@
 > untouched (no manual reload), through an entire real audit run — progress genuinely advanced
 > (0% → 38% → 88% → 100%), the Audit Log showed each engine's real completion in order, the page
 > correctly landed on "— · completed", and the real "View Summary" button appeared automatically.
+>
+> **Broken Links & Images redesigned as a dedicated validation capability**, per the Qualexa V1
+> Redesign Strategy's Phase 1 priority (accuracy/evidence over feature count, one capability built
+> end-to-end and trusted before the next). Previously, Discovery observed same-origin broken links
+> only as a side effect of its own static-HTML crawl (`sharedResources.brokenLinks`) — it never
+> checked external links, never checked images, and never checked links a client-side script
+> inserted into the DOM after the initial HTML response. That whole path is gone: Discovery
+> (`discovery-engine`, 0.1.0 → **0.2.0**) is now page-discovery only — `crawl()` returns
+> `DiscoveredPage[]`, full stop, no `brokenLinks` map, no `recordBrokenLink()`. Real link/image
+> collection moved to the Browser Engine (`browser-engine`, 0.1.0 → **0.2.0**), which already
+> renders every page in a real browser for screenshots/DOM anyway — `collectLinksAndImages()` now
+> runs there too, against the live rendered DOM (`page.evaluate()`), resolving every `a[href]`/
+> `img[src]` to an absolute URL, a best-effort CSS selector, and a real `getBoundingClientRect()`-
+> derived bounding box (converted from viewport-relative to document-relative coordinates via
+> `window.scrollX`/`scrollY`, since the page screenshot is `fullPage: true`). This is the only
+> source in the system of a real bounding box for a link/image, and it catches JS-rendered links a
+> static parse would miss. The Functional Engine (`functional-engine`, → **0.4.0**) is now the
+> dedicated validator: a new `link-checker.ts` does HEAD-first/GET-fallback HTTP checking (HEAD is
+> cheap; falls back to GET only on 403/405/501 — servers that reject HEAD specifically, matching
+> `linkinator`'s approach), follows redirects manually via `redirect: "manual"` up to 5 hops,
+> detecting loops and "redirects to a broken destination" as its own **Invalid Redirect** category
+> distinct from a plain broken link, and pools checks with bounded concurrency plus a per-audit
+> dedup cache (stashed on `context.sharedResources`'s index-signature extension, not a named field
+> — a private implementation detail of one Engine) so the same URL appearing on 20 pages is only
+> actually requested once, avoiding both wasted time and false negatives from external-server rate-
+> limiting. Findings are now one-per-occurrence (a specific broken link on a specific page), not
+> the old page-aggregated "3 examples + a count" pattern.
+>
+> This is also the first capability to use two new, deliberately-not-yet-retrofitted shared
+> primitives: a mandatory `location: FindingLocation | null` field on every `EngineFinding`
+> (`selector`/`textSnippet`/`boundingBox`; forced onto every engine's finding construction as a
+> required TS field so none could silently skip it, but every engine other than Functional just
+> sets `location: null` with a comment — Location adoption elsewhere is a future phase's job, not
+> retrofitted onto Visual/Content/Browser Validation/UI Validation/Workflow in this pass) and a
+> deterministic highlighted-screenshot evidence type (`packages/core/src/highlight.ts`,
+> `drawHighlightBox()` — raw PNG pixel manipulation via `pngjs`, not OpenCV, since it's just an
+> outline rectangle; same bounding box always produces pixel-identical output, verified by
+> `highlight.verify.ts`'s 6 checks). Both are exported from `@tentwenty/core` for future engines to
+> adopt when their own turn comes.
+>
+> **A real, load-bearing `page.evaluate()` gotcha, worth flagging for any future Browser Engine
+> work**: esbuild/tsx's transpilation wraps *any* named function binding inside a function passed
+> to `page.evaluate()` — not just `function name(){}` declarations but also `const name = () =>
+> {}` arrow expressions — with a `__name(fn, "name")` call, to preserve `.name` after
+> transpilation. Playwright serializes the whole outer function via `.toString()` and runs that
+> source fresh inside the page's isolated context, which has no access to the Node-side `__name`
+> helper, so any named binding anywhere in the function body throws `ReferenceError: __name is not
+> defined` the instant the page tries to run it — live-observed on a real audit, and *not* fixed by
+> converting the offending helpers from `function` declarations to `const` arrows (tried first;
+> same error persisted). Confirmed root cause by printing `collectLinksAndImages.toString()` from a
+> throwaway debug script before touching the real file — the transpiled output showed
+> `const cssPath=__name(el=>{...},"cssPath")`, i.e. the wrapper applies to both binding forms
+> equally. The only fix is to inline all logic into one fully anonymous callback with zero named
+> function/const bindings anywhere in the evaluated function body — verified clean (no `__name`
+> anywhere) via the same `.toString()` technique before applying it to `collectLinksAndImages()`.
+>
+> **Live-verified end-to-end** against a real local fixture site (broken internal link, broken
+> external link to a genuinely nonexistent domain, a redirect loop, a working and a broken image):
+> a real Playwright-driven audit through the actual Audit Center UI produced all four target
+> finding types correctly categorized (Broken Link / Broken Image / Invalid Redirect, correctly
+> distinguished from each other), each with accurate Location data, confidence 0.97, zero false
+> positives on the working link/image, and both `SCREENSHOT` and `HIGHLIGHTED_SCREENSHOT` evidence
+> rows persisted. Confirmed in the real Findings UI: the finding list renders the new titles, the
+> detail view shows a "Location" section with the element's selector, and the "Highlighted"
+> evidence tab is selected by default (a smart-default that prefers the highlighted screenshot over
+> the plain one when both exist), with "Screenshot" available as a fallback tab. **Not yet done**:
+> real-project testing — this fixture-level verification confirms the pipeline works correctly, not
+> that it's free of false positives/negatives on the varied real sites this is meant to run against;
+> per the Redesign Strategy's own philosophy, that measurement pass happens next, before Phase 2
+> (Navigation Validation) begins.
 
 ## Architecture Philosophy
 

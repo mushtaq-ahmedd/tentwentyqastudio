@@ -16,7 +16,7 @@ export type FindingStatus = "new" | "reviewed" | "accepted" | "rejected" | "igno
 
 export type ConfidenceLabel = "Very High" | "High" | "Medium" | "Low";
 
-export type EvidenceType = "screenshot" | "dom" | "html" | "css" | "console";
+export type EvidenceType = "screenshot" | "highlighted_screenshot" | "dom" | "html" | "css" | "console";
 
 export type Evidence = {
   id: string;
@@ -24,6 +24,15 @@ export type Evidence = {
   type: EvidenceType;
   /** Object storage path in production (docs/05: evidence is metadata-only, files live outside Postgres). Mock data inlines content directly. */
   content: string;
+};
+
+/** A precise on-page pointer — mandatory going forward per CLAUDE.md's Location rule, captured
+ * by the detecting Engine itself (docs/03). `null` for findings from an Engine that hasn't
+ * adopted this yet (migrated one capability at a time — see docs/03's Links & Images note). */
+export type FindingLocation = {
+  selector: string | null;
+  textSnippet: string | null;
+  boundingBox: { x: number; y: number; width: number; height: number } | null;
 };
 
 export type Finding = {
@@ -46,6 +55,7 @@ export type Finding = {
    * finding (docs/06: "AI failure must never block report generation"). */
   aiExplanation: string | null;
   status: FindingStatus;
+  location: FindingLocation | null;
   evidence: Evidence[];
   createdAt: string;
 };

@@ -1,4 +1,5 @@
 export * from "./types";
+export * from "./highlight";
 export * from "./registry";
 export * from "./orchestrator";
 export * from "./storage";

@@ -94,8 +94,10 @@ function extractFlowingText($: cheerio.CheerioAPI): string {
   return parts.join(" ");
 }
 
-function findingBase(context: EngineContext): Pick<EngineFinding, "pageUrl" | "engine"> {
-  return { pageUrl: context.page!.url, engine: "CONTENT" };
+function findingBase(context: EngineContext): Pick<EngineFinding, "pageUrl" | "engine" | "location"> {
+  // Location not yet adopted by this Engine (docs/03: migrated one capability at a time — Links
+  // & Images first; Content & Grammar is a later phase).
+  return { pageUrl: context.page!.url, engine: "CONTENT", location: null };
 }
 
 /**

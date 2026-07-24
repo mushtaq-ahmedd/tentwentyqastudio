@@ -9,10 +9,12 @@
     "@anthropic-ai/sdk": "^0.32.1",
     "@supabase/supabase-js": "^2.110.7",
     "bullmq": "^5.34.5",
-    "ioredis": "^5.4.2"
+    "ioredis": "^5.4.2",
+    "pngjs": "^7.0.0"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/pngjs": "^6.0.5",
     "typescript": "^5",
     "tsx": "^4.19.2"
   }

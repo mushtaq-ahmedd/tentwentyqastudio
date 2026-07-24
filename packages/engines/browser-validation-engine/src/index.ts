@@ -6,20 +6,25 @@ import {
   type EngineFinding,
 } from "@tentwenty/core";
 
-/** Distinguishes a failed image request ("Missing Image") from any other failed page resource
- * ("Broken Resource" — script, stylesheet, font, XHR/fetch call). */
+/** Distinguishes an image request failure from any other failed page resource ("Broken
+ * Resource" — script, stylesheet, font, XHR/fetch call). Image failures themselves are no longer
+ * reported here — the Links & Images capability (Functional Engine) now owns "Broken Image" as a
+ * real check against the actual `<img>` element (selector, bounding box, alt text), not a regex
+ * guess against a failed request's URL text. This regex is kept only to EXCLUDE image requests
+ * from "Broken Resource" so the same failure isn't reported twice by two different engines. */
 const IMAGE_EXTENSIONS = /\.(png|jpe?g|gif|svg|webp|ico|bmp|avif)(\?.*)?$/i;
 
-function findingBase(context: EngineContext): Pick<EngineFinding, "pageUrl" | "engine"> {
-  return { pageUrl: context.page!.url, engine: "BROWSER_VALIDATION" };
+function findingBase(context: EngineContext): Pick<EngineFinding, "pageUrl" | "engine" | "location"> {
+  // Location not yet adopted by this Engine (docs/03: migrated one capability at a time).
+  return { pageUrl: context.page!.url, engine: "BROWSER_VALIDATION", location: null };
 }
 
 export const browserValidationEngine: Engine = {
   id: "browser-validation-engine",
   name: "BROWSER_VALIDATION",
-  version: "0.1.0",
+  version: "0.2.0",
   description:
-    "Deterministic checks against the live browser session: console errors, missing images, and broken page resources (docs/02 'Browser Validation') — split out from the Functional Engine, which now covers only broken links (docs/02 keeps these as two separate V1 features, and CLAUDE.md non-negotiable #4 is one responsibility per Engine).",
+    "Deterministic checks against the live browser session: console errors and broken (non-image) page resources. Missing/broken images moved to the Functional Engine's Links & Images capability, which checks the real <img> element directly instead of guessing from a failed network request's URL text.",
   dependencies: ["browser-engine"],
   supportedValidationTypes: ["BROWSER_VALIDATION"],
   scope: "page",
@@ -53,25 +58,9 @@ export const browserValidationEngine: Engine = {
       });
     }
 
-    const imageErrors = artifacts.networkErrors.filter((e) => IMAGE_EXTENSIONS.test(e));
+    // Image request failures are excluded here — the Functional Engine's Links & Images
+    // capability now reports those, checked against the real <img> element (see the header note).
     const otherResourceErrors = artifacts.networkErrors.filter((e) => !IMAGE_EXTENSIONS.test(e));
-
-    if (imageErrors.length > 0) {
-      const examples = imageErrors.slice(0, 3).join("; ");
-      findings.push({
-        ...findingBase(context),
-        severity: "MEDIUM",
-        confidence: 0.92,
-        category: "Missing Image",
-        title: `${imageErrors.length} missing image${imageErrors.length > 1 ? "s" : ""} on this page`,
-        description: `${imageErrors.length} image request(s) failed while this page loaded, e.g. ${examples}.`,
-        expectedResult: "Every image on this page loads successfully.",
-        actualResult: `${imageErrors.length} image request(s) failed: ${examples}.`,
-        businessImpact: "Missing images look unpolished and can hide important content (product photos, icons, logos).",
-        suggestedResolution: "Fix the broken image path(s) or restore the missing file(s).",
-        evidence: [],
-      });
-    }
 
     if (otherResourceErrors.length > 0) {
       const examples = otherResourceErrors.slice(0, 3).join("; ");

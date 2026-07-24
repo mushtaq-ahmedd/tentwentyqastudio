@@ -23,8 +23,11 @@ const PIXELMATCH_THRESHOLD = 0.1;
  * still-open ambiguity — so confidence stays in the same band, not higher. */
 const CONFIDENCE = 0.75;
 
-function findingBase(context: EngineContext): Pick<EngineFinding, "pageUrl" | "engine"> {
-  return { pageUrl: context.page!.url, engine: "VISUAL" };
+function findingBase(context: EngineContext): Pick<EngineFinding, "pageUrl" | "engine" | "location"> {
+  // Location not yet adopted by this Engine (docs/03: migrated one capability at a time — Links
+  // & Images first). A whole-page visual diff doesn't map cleanly onto a single element/selector
+  // anyway; its own Location rollout is a question for when this Engine's turn comes.
+  return { pageUrl: context.page!.url, engine: "VISUAL", location: null };
 }
 
 export const visualEngine: Engine = {

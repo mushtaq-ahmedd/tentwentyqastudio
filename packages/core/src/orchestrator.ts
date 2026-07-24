@@ -1,4 +1,4 @@
-import { prisma } from "@tentwenty/db";
+import { prisma, Prisma } from "@tentwenty/db";
 import { engineRegistry } from "./registry";
 import { resolveEngineConfig } from "./engine-config";
 import { TransientEngineError, type DiscoveredPage, type Engine, type EngineContext, type EngineFinding } from "./types";
@@ -354,6 +354,7 @@ async function persistFindings(auditId: string, projectId: string, findings: Eng
         actualResult: finding.actualResult,
         businessImpact: finding.businessImpact,
         suggestedResolution: finding.suggestedResolution,
+        location: finding.location ?? Prisma.JsonNull,
         evidence: {
           create: finding.evidence.map((e) => ({ type: e.type, storagePath: e.content })),
         },

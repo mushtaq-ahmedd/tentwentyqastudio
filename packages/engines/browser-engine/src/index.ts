@@ -10,6 +10,8 @@ import {
   type Engine,
   type EngineConfig,
   type EngineContext,
+  type PageImage,
+  type PageLink,
 } from "@tentwenty/core";
 
 /** Fallback when an engine runs outside the Orchestrator's normal context-building (shouldn't
@@ -28,6 +30,9 @@ const SETTLE_MS = 1_000;
 /** Bound on how many text-bearing elements get captured per page (Element Matching's candidate
  * pool) — a content-heavy page shouldn't produce unbounded data. */
 const MAX_DOM_ELEMENTS = 500;
+/** Bound on how many links/images get captured per page (Links & Images capability's input) —
+ * same "don't let one content-heavy page produce unbounded data" rationale as MAX_DOM_ELEMENTS. */
+const MAX_LINKS_OR_IMAGES = 300;
 
 /**
  * Runs inside the real rendered page (not static HTML parsing — position/size and computed style
@@ -70,12 +75,109 @@ function collectDomElements(maxElements: number): DomElement[] {
   return results;
 }
 
+/**
+ * Runs inside the real rendered page to collect every link and image with its resolved absolute
+ * URL, a best-effort CSS selector, and its real on-page bounding box (`getBoundingClientRect()`)
+ * — the Links & Images capability's actual input, replacing what used to be a byproduct of
+ * Discovery's separate static-HTML crawl (docs/03's Links & Images redesign note). A rendered
+ * page is the more accurate source: it reflects client-side-inserted links/images a plain HTML
+ * fetch would miss, and it's the only place a real bounding box (needed for the highlighted-
+ * screenshot evidence) can come from at all.
+ */
+function collectLinksAndImages(maxEach: number): { links: PageLink[]; images: PageImage[] } {
+  // Deliberately no named helper functions anywhere in this function body — not `function
+  // name(){}`, not even `const name = () => {}` (live-verified: esbuild/tsx wraps *both* forms
+  // with a `__name(fn, "name")` call to preserve `.name` after transpilation). Playwright's
+  // `page.evaluate()` serializes this whole function via `.toString()` and runs the source fresh
+  // inside the page's isolated context, which has no access to that `__name` helper (it lives in
+  // the Node-side module scope, not inside this function's own text) — so any named binding here
+  // throws "ReferenceError: __name is not defined" the moment the page tries to run it
+  // (live-observed on a real audit). The cssPath/bounding-box logic below is duplicated inline in
+  // one shared, *anonymous* forEach callback instead of being extracted into a reusable named
+  // helper — empirically confirmed via `Function.prototype.toString()` to produce no `__name` wrapper.
+  const links: PageLink[] = [];
+  const images: PageImage[] = [];
+
+  const linkEls = Array.from(document.querySelectorAll("a[href]")).map((el) => ({ el, kind: "link" as const }));
+  const imageEls = Array.from(document.querySelectorAll("img[src]")).map((el) => ({ el, kind: "image" as const }));
+
+  [...linkEls, ...imageEls].forEach(({ el, kind }) => {
+    if (kind === "link" && links.length >= maxEach) return;
+    if (kind === "image" && images.length >= maxEach) return;
+
+    const attr = kind === "link" ? el.getAttribute("href") : el.getAttribute("src");
+    if (!attr) return;
+    if (kind === "link" && (attr.startsWith("mailto:") || attr.startsWith("tel:") || attr.startsWith("javascript:") || attr.startsWith("#"))) return;
+
+    let url: string;
+    try {
+      url = new URL(attr, location.href).toString();
+    } catch {
+      return;
+    }
+
+    let selector: string;
+    if (el.id) {
+      selector = `#${CSS.escape(el.id)}`;
+    } else {
+      const parts: string[] = [];
+      let node: Element | null = el;
+      let depth = 0;
+      while (node && depth < 4) {
+        let part = node.tagName.toLowerCase();
+        const parent: Element | null = node.parentElement;
+        if (parent) {
+          const siblings = Array.from(parent.children).filter((c) => c.tagName === node!.tagName);
+          if (siblings.length > 1) part += `:nth-of-type(${siblings.indexOf(node) + 1})`;
+        }
+        parts.unshift(part);
+        node = parent;
+        depth++;
+      }
+      selector = parts.join(" > ");
+    }
+
+    // getBoundingClientRect() is viewport-relative, but the page screenshot is captured with
+    // `fullPage: true` (the whole scrollable document) — adding the current scroll offset
+    // converts to document-relative coordinates that actually line up with pixels in that
+    // screenshot, regardless of scroll position at capture time.
+    const rect = el.getBoundingClientRect();
+    const boundingBox =
+      rect.width === 0 || rect.height === 0
+        ? null
+        : {
+            x: Math.round(rect.x + window.scrollX),
+            y: Math.round(rect.y + window.scrollY),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+          };
+
+    if (kind === "link") {
+      links.push({
+        url,
+        selector,
+        text: (el.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 100),
+        boundingBox,
+      });
+    } else {
+      images.push({
+        url,
+        selector,
+        alt: el.getAttribute("alt") ?? "",
+        boundingBox,
+      });
+    }
+  });
+
+  return { links, images };
+}
+
 export const browserEngine: Engine = {
   id: "browser-engine",
   name: "BROWSER",
-  version: "0.1.0",
+  version: "0.2.0",
   description:
-    "Renders each discovered page in a real browser, capturing screenshots, DOM, console output, and network activity for later Validation engines to judge.",
+    "Renders each discovered page in a real browser, capturing screenshots, DOM, console output, network activity, and every link/image (resolved URL, selector, bounding box) for later Validation engines to judge.",
   dependencies: ["discovery-engine"],
   supportedValidationTypes: [],
   scope: "page",
@@ -133,6 +235,7 @@ export const browserEngine: Engine = {
       const screenshotBuffer = await browserPage.screenshot({ fullPage: true, type: "png" });
       const domHtml = await browserPage.content();
       const domElements = await browserPage.evaluate(collectDomElements, MAX_DOM_ELEMENTS);
+      const { links, images } = await browserPage.evaluate(collectLinksAndImages, MAX_LINKS_OR_IMAGES);
 
       const [screenshotPath, domSnapshotPath, consoleLogPath, networkLogPath, cssSnapshotPath] = await Promise.all([
         uploadEvidence(context.auditId, page.id, "screenshot", screenshotBuffer, "image/png"),
@@ -170,6 +273,8 @@ export const browserEngine: Engine = {
         consoleMessages,
         networkErrors,
         domElements,
+        links,
+        images,
       };
       context.sharedResources.pageArtifacts ??= {};
       context.sharedResources.pageArtifacts[page.url] = artifacts;

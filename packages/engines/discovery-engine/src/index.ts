@@ -1,13 +1,5 @@
 import * as cheerio from "cheerio";
-import {
-  registerEngine,
-  uploadEvidence,
-  TransientEngineError,
-  type BrokenLink,
-  type DiscoveredPage,
-  type Engine,
-  type EngineContext,
-} from "@tentwenty/core";
+import { registerEngine, TransientEngineError, type DiscoveredPage, type Engine, type EngineContext } from "@tentwenty/core";
 
 const MAX_PAGES = 20;
 const FETCH_TIMEOUT_MS = 10_000;
@@ -47,45 +39,22 @@ async function fetchWithTimeout(url: string): Promise<Response> {
   }
 }
 
-async function recordBrokenLink(
-  auditId: string,
-  brokenLinks: BrokenLink[],
-  sourcePage: string,
-  brokenHref: string,
-  reason: string
-): Promise<void> {
-  const evidenceText = [
-    "Broken link check",
-    `Source page: ${sourcePage}`,
-    `Target URL: ${brokenHref}`,
-    `Result: ${reason}`,
-    `Checked at: ${new Date().toISOString()}`,
-  ].join("\n");
-  // No real Page row exists yet at this point in the pipeline (Discovery runs before pages are
-  // persisted) — "discovery" is a shared namespace, not a pageId; the Functional Engine's
-  // finding gets the real pageId once it looks the page up by URL.
-  const evidencePath = await uploadEvidence(
-    auditId,
-    "discovery",
-    `broken-link-${brokenLinks.length}`,
-    evidenceText,
-    "text/plain"
-  );
-  brokenLinks.push({ pageUrl: sourcePage, brokenHref, reason, evidencePath });
-}
-
-async function crawl(
-  baseUrl: string,
-  auditId: string
-): Promise<{ pages: DiscoveredPage[]; brokenLinks: BrokenLink[] }> {
+/**
+ * Crawls same-origin pages to build the site's page inventory — nothing else. Broken-link
+ * checking used to be a byproduct of this crawl (a failed fetch got recorded as a finding
+ * source); that's been deliberately removed. Discovery now only judges "is this a page worth
+ * adding to the inventory," never "is this link broken" — that's the Links & Images capability's
+ * job, checking every link/image on the real rendered page (Browser Engine), not a side effect of
+ * how Discovery happens to crawl. A same-origin URL that fails to fetch here is simply not added
+ * as a page and not recursed into — Discovery can't discover further pages behind a dead link,
+ * but it doesn't report anything about that; the dedicated engine re-checks every link
+ * independently regardless of whether Discovery's crawl happened to touch it.
+ */
+async function crawl(baseUrl: string): Promise<DiscoveredPage[]> {
   const origin = new URL(baseUrl).origin;
   const visited = new Set<string>();
   const queue: string[] = [normalizeUrl(baseUrl)];
   const pages: DiscoveredPage[] = [];
-  const brokenLinks: BrokenLink[] = [];
-  // First-seen source page for each discovered URL — needed to attribute a broken link back to
-  // the page that links to it, since the queue itself is just a flat list of URLs.
-  const linkSource = new Map<string, string>();
 
   while (queue.length > 0 && pages.length < MAX_PAGES) {
     const current = queue.shift();
@@ -95,32 +64,20 @@ async function crawl(
     let html: string;
     try {
       const res = await fetchWithTimeout(current);
-      if (!res.ok) {
-        const source = linkSource.get(current);
-        if (source) {
-          await recordBrokenLink(auditId, brokenLinks, source, current, `HTTP ${res.status} ${res.statusText}`.trim());
-        }
-        continue; // a broken link shouldn't fail the whole crawl
-      }
+      if (!res.ok) continue; // not a valid page for the inventory — see docstring above
       html = await res.text();
-    } catch (err) {
-      const source = linkSource.get(current);
-      if (source) {
-        await recordBrokenLink(auditId, brokenLinks, source, current, `Unreachable: ${(err as Error).message}`);
-      }
+    } catch {
       continue; // one unreachable page shouldn't abort discovery of the rest
     }
 
     const $ = cheerio.load(html);
-    const currentUrl = new URL(current);
-    pages.push({ url: current, name: pageNameFromPath(currentUrl.pathname) });
+    pages.push({ url: current, name: pageNameFromPath(new URL(current).pathname) });
 
     $("a[href]").each((_, el) => {
       const href = $(el).attr("href");
       if (!href || href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("#")) return;
       try {
         const resolved = normalizeUrl(new URL(href, current).toString());
-        if (!linkSource.has(resolved)) linkSource.set(resolved, current);
         if (
           new URL(resolved).origin === origin &&
           !NON_PAGE_EXTENSIONS.test(new URL(resolved).pathname) &&
@@ -135,15 +92,15 @@ async function crawl(
     });
   }
 
-  return { pages, brokenLinks };
+  return pages;
 }
 
 export const discoveryEngine: Engine = {
   id: "discovery-engine",
   name: "DISCOVERY",
-  version: "0.1.0",
+  version: "0.2.0",
   description:
-    "Crawls a project's environment to build the page inventory later engines validate against.",
+    "Crawls a project's environment to build the page inventory later engines validate against. Page discovery only — it no longer observes or reports broken links as a byproduct of crawling (moved to the Links & Images capability's own dedicated check against every rendered page's real links/images).",
   dependencies: [],
   supportedValidationTypes: [],
   scope: "audit",
@@ -152,9 +109,7 @@ export const discoveryEngine: Engine = {
     const baseUrl = context.environment.url.startsWith("http")
       ? context.environment.url
       : `https://${context.environment.url}`;
-    const { pages, brokenLinks } = await crawl(baseUrl, context.auditId);
-    context.sharedResources.pages = pages;
-    context.sharedResources.brokenLinks = brokenLinks;
+    context.sharedResources.pages = await crawl(baseUrl);
   },
 
   async validate() {
